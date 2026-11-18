@@ -156,7 +156,7 @@ progress::-moz-progress-bar { background: var(--accent-ink); }
 .reader aside > div:not(.tabs) { flex: 1; min-height: 0; overflow: auto; padding: 1.25rem 1.75rem 3rem; }
 .reader aside > [hidden] { display: none !important; }
 
-.tabs { display: flex; gap: 1.5rem; padding: 0 1.75rem; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 1.1rem; white-space: nowrap; overflow-x: auto; flex: none; padding: 0 1.25rem; border-bottom: 1px solid var(--line); }
 .tabs button { border: 0; border-radius: 0; padding: 0.8rem 0 0.65rem; color: var(--pencil); border-bottom: 3px solid transparent; }
 .tabs button[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--accent-ink); }
 
@@ -211,6 +211,47 @@ progress::-moz-progress-bar { background: var(--accent-ink); }
 .question .right { border-color: var(--good); color: var(--good); font-weight: 700; }
 .question .wrong { border-color: var(--error); color: var(--error); }
 .question p { margin: 0.2rem 0 0; }
+
+/* ---- chapter guide ---- */
+.guide > select { width: 100%; margin-bottom: 1.2rem; font-size: 0.9rem; }
+.guide .summary { font: 1.15rem/1.65 var(--read); }
+.guide .idea { padding-left: 1.1rem; margin-bottom: 1.3rem; border-left: 3px solid var(--accent-ink); }
+.guide .idea p { font: 1.05rem/1.65 var(--read); margin: 0.2rem 0 0.4rem; }
+.guide .pages { display: inline-flex; vertical-align: baseline; }
+.guide ul { list-style: none; padding: 0; margin: 0; }
+.guide .details li { font: 1rem/1.6 var(--read); margin-bottom: 0.7rem; }
+.pagemap li { display: grid; grid-template-columns: 5.2rem 1fr; gap: 0.6rem; align-items: baseline; padding: 0.35rem 0.4rem; border-radius: 6px; font-size: 0.9rem; }
+.pagemap li[aria-current] { background: var(--desk); }
+.pagemap .skip { color: var(--pencil); }
+.pagemap .unchecked strong { color: var(--error); }
+.pagemap + p { margin-top: 1.2rem; }
+
+/* ---- highlights on the page ---- */
+.hl { position: absolute; pointer-events: none; border-radius: 2px; mix-blend-mode: multiply; }
+.hl.yellow, .ink.yellow, .mark.yellow { --ink-colour: #ffe14d; }
+.hl.green, .ink.green, .mark.green { --ink-colour: #8ee59b; }
+.hl.pink, .ink.pink, .mark.pink { --ink-colour: #ffa3c4; }
+.hl.blue, .ink.blue, .mark.blue { --ink-colour: #8cc8ff; }
+.hl { background: var(--ink-colour); }
+/* On the night page the paper is dark, so the ink is laid over it thinly instead of multiplied. */
+.pdf.night .hl { mix-blend-mode: normal; opacity: 0.35; }
+.seltools .inks { display: flex; align-items: center; gap: 0.35rem; padding: 0 0.5rem 0 0.6rem; border-left: 1px solid rgb(255 255 255 / 0.35); }
+.seltools button.ink { width: 1.25rem; height: 1.25rem; padding: 0; border-radius: 50%; background: var(--ink-colour); border: 2px solid var(--on-accent); }
+.seltools button.ink:hover { background: var(--ink-colour); transform: scale(1.15); }
+
+/* ---- notes: everything saved, by chapter ---- */
+.notebook details { border-bottom: 1px solid var(--line); padding: 0.7rem 0; }
+.notebook summary { cursor: pointer; }
+.notebook summary strong { font: 600 1.05rem/1.4 var(--read); }
+.notebook summary span { display: block; padding-left: 1.1rem; }
+.notebook h2 { margin: 1.2rem 0 0.4rem; }
+.notebook ul { list-style: none; padding: 0; margin: 0; }
+.notebook li { margin-bottom: 0.6rem; }
+.notebook .summary { font: 1rem/1.6 var(--read); margin: 0.8rem 0 0; }
+.notebook .mark { border-left: 4px solid var(--ink-colour); padding-left: 0.7rem; }
+.notebook .mark q { font: 1rem/1.55 var(--read); display: block; margin-bottom: 0.3rem; }
+.notebook .pagesum ul { list-style: disc; padding-left: 1.2rem; margin-top: 0.3rem; font: 0.95rem/1.55 var(--read); }
+.notebook .pagesum li { margin-bottom: 0.25rem; }
 
 /* ---- chat ---- */
 .reader aside > .chat-tab { display: flex; flex-direction: column; gap: 0.8rem; padding-bottom: 1.25rem; overflow: hidden; }

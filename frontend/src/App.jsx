@@ -335,11 +335,28 @@ function Reader({ book: initial, onClose }) {
   useEffect(() => {
     if (book.status === 'ready') api(`/books/${book.id}/toc`).then(setToc, () => {})
   }, [book.id, book.status])
-  const tops = toc.filter((e) => e.level === 1)
-  const at = tops.findLastIndex((e) => e.page <= page)
-  const chapter = at >= 0 && {
-    title: tops[at].title, start: tops[at].page,
-    end: Math.max(tops[at].page, (tops[at + 1]?.page ?? (numPages || page) + 1) - 1),
+  // The book cut into chapters. Notes, chats and highlights are grouped by these.
+  const [chapters, setChapters] = useState([])
+  useEffect(() => {
+    if (book.status === 'ready') api(`/books/${book.id}/chapters`).then(setChapters, () => {})
+  }, [book.id, book.status])
+  const chapter = chapterOf(chapters, page)
+
+  // Highlights of the whole book: drawn on the page, and listed in the Notes tab.
+  const [highlights, setHighlights] = useState([])
+  useEffect(() => {
+    api(`/books/${book.id}/highlights`).then(setHighlights, () => {})
+  }, [book.id])
+  const removeHighlight = (id) => {
+    setPicked(null)
+    api(`/highlights/${id}`, { method: 'DELETE' }).then(() => setHighlights((all) => all.filter((h) => h.id !== id)), () => {})
+  }
+
+  // A chat picked in the Notes tab opens in the Chat tab.
+  const [chatRequest, setChatRequest] = useState(null)
+  const openChat = (id) => {
+    setChatRequest({ id })
+    setTab('chat')
   }
 
   // The contents list can be closed. Remembered in this browser.
@@ -356,19 +373,43 @@ function Reader({ book: initial, onClose }) {
   }
 
   // Text selected on the book page gets a small toolbar: Simplify, Explain, Define.
-  const [selection, setSelection] = useState(null) // { text, x, y }
+  const [selection, setSelection] = useState(null) // { text, x, y, rects }
+  const [picked, setPicked] = useState(null)       // a highlight the reader clicked: { id, x, y }
   const [note, setNote] = useState(null)           // { action, text, result?, error? }
   useEffect(() => {
     setSelection(null)
+    setPicked(null)
     setNote(null)
   }, [page])
 
-  const onSelect = () => {
+  // x, y: where the mouse was let go.
+  const onSelect = (x, y) => {
     const sel = window.getSelection()
     const text = sel.toString().replace(/\s+/g, ' ').trim()
-    if (!text || !paneRef.current.contains(sel.anchorNode)) return setSelection(null)
-    const box = sel.getRangeAt(0).getBoundingClientRect()
-    setSelection({ text: text.slice(0, 2000), x: box.left + box.width / 2, y: box.top })
+    const sheet = paneRef.current.querySelector('.react-pdf__Page')?.getBoundingClientRect()
+    if (!sheet) return
+    if (!text || !paneRef.current.contains(sel.anchorNode)) {
+      // A plain click. On a highlight, it offers to remove it.
+      const px = (x - sheet.left) / sheet.width
+      const py = (y - sheet.top) / sheet.height
+      const hit = highlights.find((h) => h.page_no === page &&
+        h.rects.some(([l, t, w, hgt]) => px >= l && px <= l + w && py >= t && py <= t + hgt))
+      setSelection(null)
+      return setPicked(hit ? { id: hit.id, x, y } : null)
+    }
+    setPicked(null)
+    const range = sel.getRangeAt(0)
+    const box = range.getBoundingClientRect()
+    setSelection({ text: text.slice(0, 2000), x: box.left + box.width / 2, y: box.top, rects: lineRects(range, sheet) })
+  }
+
+  const highlight = (color) => {
+    const { text, rects } = selection
+    setSelection(null)
+    window.getSelection().removeAllRanges()
+    if (rects.length === 0) return
+    api(`/books/${book.id}/highlights`, { method: 'POST', json: { page, color, text, rects } })
+      .then((h) => setHighlights((all) => [...all, h]), () => {})
   }
 
   const act = (action) => {
@@ -438,14 +479,34 @@ function Reader({ book: initial, onClose }) {
           style={{ left: selection.x, top: Math.max(8, selection.y - 46) }}
           onMouseDown={(e) => e.preventDefault() /* keep the text selected */}>
           {SELECT_ACTIONS.map(([id, label]) => <button key={id} onClick={() => act(id)}>{label}</button>)}
+          <span className="inks" role="group" aria-label="Highlight">
+            {INKS.map((c) => (
+              <button key={c} className={`ink ${c}`} onClick={() => highlight(c)} aria-label={`Highlight in ${c}`} title={`Highlight in ${c}`} />
+            ))}
+          </span>
+        </div>
+      )}
+      {picked && (
+        <div className="seltools" role="toolbar" aria-label="This highlight" style={{ left: picked.x, top: Math.max(8, picked.y - 46) }}>
+          <button onClick={() => removeHighlight(picked.id)}>Remove highlight</button>
         </div>
       )}
       <main>
         {tocOpen && toc.length > 0 && <Contents toc={toc} page={page} go={goFromToc} onClose={() => showToc(false)} />}
-        <section className={`pdf ${look}`} ref={paneRef} onMouseUp={() => setTimeout(onSelect)} onScroll={() => setSelection(null)}>
+        <section className={`pdf ${look}`} ref={paneRef}
+          onMouseUp={({ clientX, clientY }) => setTimeout(() => onSelect(clientX, clientY))}
+          onScroll={() => { setSelection(null); setPicked(null) }}>
           <Document file={`/api/books/${book.id}/file`} onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
             loading={<p className="muted">Opening the book…</p>} error={<p className="error">Could not open this PDF.</p>}>
-            {width > 0 && <Page pageNumber={page} width={Math.min(width - 32, 1000)} />}
+            {width > 0 && (
+              <Page pageNumber={page} width={Math.min(width - 32, 1000)}>
+                {/* Drawn over the page. Clicks go through to the text under them. */}
+                {highlights.filter((h) => h.page_no === page).flatMap((h) => h.rects.map(([l, t, w, hgt], i) => (
+                  <div key={`${h.id}-${i}`} className={`hl ${h.color}`}
+                    style={{ left: `${l * 100}%`, top: `${t * 100}%`, width: `${w * 100}%`, height: `${hgt * 100}%` }} />
+                )))}
+              </Page>
+            )}
           </Document>
         </section>
         <div className="divider" role="separator" aria-orientation="vertical" tabIndex={0}
@@ -456,7 +517,7 @@ function Reader({ book: initial, onClose }) {
           onDoubleClick={resetWidth} onKeyDown={onDividerKey} />
         <aside ref={asideRef} style={panelWidth ? { flex: `0 0 ${panelWidth}px`, maxWidth: 'calc(100vw - 20rem)' } : undefined}>
           <div className="tabs" role="tablist">
-            {[['page', 'Page'], ['chat', 'Chat'], ['skills', 'My skills']].map(([id, label]) => (
+            {[['page', 'Page'], ['chapter', 'Chapter'], ['chat', 'Chat'], ['notes', 'Notes'], ['skills', 'My skills']].map(([id, label]) => (
               <button key={id} role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>
             ))}
           </div>
@@ -465,8 +526,15 @@ function Reader({ book: initial, onClose }) {
             {note && <SelectionNote note={note} onClose={() => setNote(null)} />}
             <PageCard key={page} book={book} page={page} version={profileVersion} onProfileChange={profileChanged} autoRead={autoRead} />
           </div>
+          <div hidden={tab !== 'chapter'}>
+            <ChapterGuide book={book} page={page} toc={toc} numPages={numPages} go={go} active={tab === 'chapter'} />
+          </div>
           <div hidden={tab !== 'chat'} className="chat-tab">
-            <Chat book={book} page={page} go={go} onProfileChange={profileChanged} />
+            <Chat book={book} page={page} go={go} onProfileChange={profileChanged} chapters={chapters} request={chatRequest} />
+          </div>
+          <div hidden={tab !== 'notes'}>
+            <Notebook book={book} page={page} chapters={chapters} highlights={highlights} go={go} active={tab === 'notes'}
+              openChat={openChat} removeHighlight={removeHighlight} />
           </div>
           <div hidden={tab !== 'skills'}>
             <Skills active={tab === 'skills'} version={profileVersion} onProfileChange={profileChanged} />
@@ -542,6 +610,242 @@ function PageLink({ page, go }) {
   return <button onClick={() => go(page)}>page {page}</button>
 }
 
+const INKS = ['yellow', 'green', 'pink', 'blue']
+
+const chapterOf = (chapters, page) => chapters.findLast((c) => c.start <= page)
+
+// The selected text as one box per line: [left, top, width, height], each a part of the page size.
+// The browser gives one box per piece of text, often several on a line and some twice.
+function lineRects(range, sheet) {
+  const boxes = [...range.getClientRects()]
+    .filter((r) => r.width > 1 && r.height > 1 && r.height < sheet.height * 0.15) // not the box of the whole text layer
+    .sort((a, b) => a.top - b.top || a.left - b.left)
+  const lines = []
+  for (const r of boxes) {
+    const line = lines.find((l) =>
+      Math.min(l.bottom, r.bottom) - Math.max(l.top, r.top) > Math.min(l.bottom - l.top, r.height) / 2 && // same line
+      r.left <= l.right + 8 && r.right >= l.left - 8)                                                      // and touching
+    if (line) {
+      Object.assign(line, {
+        left: Math.min(line.left, r.left), right: Math.max(line.right, r.right),
+        top: Math.min(line.top, r.top), bottom: Math.max(line.bottom, r.bottom),
+      })
+    } else lines.push({ left: r.left, right: r.right, top: r.top, bottom: r.bottom })
+  }
+  const part = (v) => Math.round(Math.min(Math.max(v, 0), 1) * 10000) / 10000
+  return lines.map((l) => {
+    const left = part((l.left - sheet.left) / sheet.width)
+    const top = part((l.top - sheet.top) / sheet.height)
+    return [left, top, part((l.right - sheet.left) / sheet.width - left), part((l.bottom - sheet.top) / sheet.height - top)]
+  }).filter(([, , w, h]) => w > 0 && h > 0)
+}
+
+// Everything the reader saved in this book, under the chapter it belongs to: the chapter summary,
+// page summaries, chats and highlights. Nothing here calls the LLM.
+function Notebook({ book, page, chapters, highlights, go, active, openChat, removeHighlight }) {
+  const [notes, setNotes] = useState(null)
+  useEffect(() => {
+    if (active) api(`/books/${book.id}/notes`).then(setNotes, () => {})
+  }, [book.id, active])
+
+  if (!notes) return null
+  const inside = (c, p) => p >= c.start && p <= c.end
+  const groups = chapters.map((c) => ({
+    ...c,
+    guide: notes.guides.find((g) => inside(c, g.start_page)),
+    cards: notes.cards.filter((x) => inside(c, x.page_no)),
+    chats: notes.chats.filter((x) => inside(c, x.page_no)),
+    marks: highlights.filter((x) => inside(c, x.page_no)),
+  })).filter((g) => g.guide || g.cards.length + g.chats.length + g.marks.length > 0)
+
+  if (groups.length === 0) {
+    return (
+      <p className="muted">
+        Nothing saved yet. Page summaries, chats and the text you highlight are collected here, chapter by chapter.
+      </p>
+    )
+  }
+  const count = (n, one, many) => (n > 0 ? [`${n} ${n === 1 ? one : many}`] : [])
+  return (
+    <div className="notebook">
+      {groups.map((g) => (
+        <details key={g.start} open={inside(g, page)}>
+          <summary>
+            <strong>{g.title}</strong>
+            <span className="muted small">
+              {[...count(g.chats.length, 'chat', 'chats'), ...count(g.marks.length, 'highlight', 'highlights'),
+                ...count(g.cards.length, 'page summary', 'page summaries')].join(', ')}
+            </span>
+          </summary>
+          {g.guide && <p className="summary">{g.guide.summary}</p>}
+          {g.chats.length > 0 && (
+            <>
+              <h2>Chats</h2>
+              <ul>
+                {g.chats.map((c) => (
+                  <li key={c.id}>
+                    <button className="link" onClick={() => openChat(c.id)}>{c.title}</button>{' '}
+                    <span className="muted small">page {c.page_no}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {g.marks.length > 0 && (
+            <>
+              <h2>Highlights</h2>
+              <ul>
+                {g.marks.map((h) => (
+                  <li key={h.id} className={`mark ${h.color}`}>
+                    <q>{h.text}</q>
+                    <span className="pages">
+                      <PageLink page={h.page_no} go={go} />
+                      <button onClick={() => removeHighlight(h.id)} aria-label="Remove this highlight">Remove</button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+          {g.cards.length > 0 && (
+            <>
+              <h2>Page summaries</h2>
+              <ul>
+                {g.cards.map((c) => (
+                  <li key={c.page_no} className="pagesum">
+                    <span className="pages"><PageLink page={c.page_no} go={go} /></span>
+                    <ul>{c.bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </details>
+      ))}
+    </div>
+  )
+}
+
+const GUIDE_MAX_PAGES = 60 // same number as MAX_GUIDE_PAGES in app.py
+
+// Every contents entry that holds this page, the widest first, with its first and last page.
+function sectionsAt(toc, page, numPages) {
+  return toc.map((entry, id) => {
+    const next = toc.slice(id + 1).find((n) => n.level <= entry.level)
+    // Parts and chapters (levels 1 and 2) start on a new page. A smaller section often starts in the
+    // middle of a page, so the page where the next one starts is counted too. Better one page too
+    // many than a missed ending.
+    const last = next ? next.page - (entry.level <= 2 ? 1 : 0) : numPages
+    return { ...entry, id, start: entry.page, end: Math.max(entry.page, Math.min(last, numPages)) }
+  }).filter((s) => s.start <= page && page <= s.end)
+}
+
+const PAGE_VALUES = { read: 'Read it', skim: 'Skim', skip: 'Can skip', unchecked: 'Not checked' }
+
+// A whole chapter in one guide: the key ideas, the details that are easy to miss, and a line for
+// every page, so the reader can see that no page was left out.
+function ChapterGuide({ book, page, toc, numPages, go, active }) {
+  const sections = sectionsAt(toc, page, numPages || 0)
+  const fits = (s) => s.end - s.start + 1 <= GUIDE_MAX_PAGES
+  const [pickedId, setPickedId] = useState(null)
+  const section = sections.find((s) => s.id === pickedId && fits(s)) || sections.find(fits)
+  const range = section && `start=${section.start}&end=${section.end}`
+  const [asked, setAsked] = useState(null) // the range the reader asked a guide for
+  const [tries, setTries] = useState(0)
+  const [state, setState] = useState({ loading: true })
+
+  useEffect(() => {
+    if (!active || !range) return
+    let live = true
+    setState({ loading: true })
+    // Until the reader asks, only a saved guide is fetched. That costs nothing.
+    api(`/books/${book.id}/guide?${range}${asked === range ? '' : '&only_saved=true'}`).then(
+      (guide) => live && setState({ guide }),
+      (err) => live && setState({ error: err.message }),
+    )
+    return () => { live = false }
+  }, [book.id, range, asked, tries, active])
+
+  if (book.status !== 'ready') return <p className="muted">Reading the book for the first time…</p>
+  if (toc.length === 0) {
+    return <p className="muted">This PDF has no table of contents, so the tool cannot tell where a chapter starts and ends.</p>
+  }
+  if (!section) {
+    return (
+      <p className="muted">
+        This chapter is longer than {GUIDE_MAX_PAGES} pages, too long for one guide.
+        Go to a section inside it and open this tab again.
+      </p>
+    )
+  }
+
+  const count = section.end - section.start + 1
+  const { guide } = state
+  return (
+    <div className="guide">
+      {sections.length > 1 && (
+        <select value={section.id} aria-label="Which part of the book" onChange={(e) => setPickedId(Number(e.target.value))}>
+          {sections.map((s) => (
+            <option key={s.id} value={s.id} disabled={!fits(s)}>
+              {s.title} (pages {s.start} to {s.end}{fits(s) ? '' : ', too long'})
+            </option>
+          ))}
+        </select>
+      )}
+      {state.loading && (asked === range
+        ? <p className="muted" role="status">Reading all {count} pages. This can take a minute or two…</p>
+        : <div className="skeleton" role="status" aria-label="Looking for a saved guide"><span /><span /><span /></div>)}
+      {state.error && (
+        <p className="error">{state.error} <button onClick={() => setTries((t) => t + 1)}>Try again</button></p>
+      )}
+      {guide?.not_made && (
+        <div className="invite">
+          <h2>{section.title}</h2>
+          <button className="primary" onClick={() => setAsked(range)}>Learn this chapter quickly</button>
+          <p>The tool reads all {count} pages (pages {section.start} to {section.end}) and gives you the important ideas.</p>
+          <p>It also lists every page, so you can see what was kept and what you can skip.</p>
+        </div>
+      )}
+      {guide?.ideas && (
+        <>
+          <p className="summary">{guide.summary}</p>
+          <h2>Key ideas</h2>
+          {guide.ideas.map((idea, i) => (
+            <div key={i} className="idea">
+              <strong>{idea.title}</strong>
+              <p>{idea.explanation}</p>
+              <span className="pages">{idea.pages.map((p) => <PageLink key={p} page={p} go={go} />)}</span>
+            </div>
+          ))}
+          {guide.details.length > 0 && (
+            <>
+              <h2>Easy to miss</h2>
+              <ul className="details">
+                {guide.details.map((d, i) => (
+                  <li key={i}>{d.text} {d.page && <span className="pages"><PageLink page={d.page} go={go} /></span>}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          <h2>Every page</h2>
+          <ul className="pagemap">
+            {guide.pages.map((p) => (
+              <li key={p.page} className={p.value} aria-current={p.page === page ? 'true' : undefined}>
+                <span className="pages"><PageLink page={p.page} go={go} /></span>
+                <span><strong>{PAGE_VALUES[p.value]}</strong>{p.figure && ' (has a figure)'}. {p.note}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="muted small">
+            Made from the text of pages {section.start} to {section.end}, for a {guide.level} reader.
+            Figures were not looked at. Their pages are marked.
+          </p>
+        </>
+      )}
+    </div>
+  )
+}
+
 const LEVELS = ['beginner', 'learning', 'comfortable']
 const skillName = (s) => s.replaceAll('_', ' ')
 
@@ -610,7 +914,7 @@ function Skills({ active, version, onProfileChange }) {
   )
 }
 
-function Chat({ book, page, go, onProfileChange }) {
+function Chat({ book, page, go, onProfileChange, chapters, request }) {
   const [note, setNote] = useState('')
   const [chats, setChats] = useState([])
   const [chatId, setChatId] = useState(null) // null = a new chat
@@ -636,6 +940,18 @@ function Chat({ book, page, go, onProfileChange }) {
     if (id) api(`/chats/${id}/messages`).then(setMessages, (err) => setError(err.message))
   }
 
+  // A chat picked in the Notes tab.
+  useEffect(() => {
+    if (!request) return
+    api(`/books/${book.id}/chats`).then(setChats, () => {})
+    open(request.id)
+  }, [request])
+
+  // Chats sit under the chapter they started in, in book order.
+  const byChapter = chapters
+    .map((c) => ({ ...c, chats: chats.filter((x) => x.page_no >= c.start && x.page_no <= c.end) }))
+    .filter((c) => c.chats.length > 0)
+
   const send = (e) => {
     e.preventDefault()
     const question = text.trim()
@@ -650,7 +966,7 @@ function Chat({ book, page, go, onProfileChange }) {
         if (res.profile_note) onProfileChange()
         if (!chatId) {
           setChatId(res.chat_id)
-          setChats((c) => [{ id: res.chat_id, title: question.slice(0, 60) }, ...c])
+          setChats((c) => [{ id: res.chat_id, title: question.slice(0, 60), page_no: page }, ...c])
         }
       }, (err) => setError(err.message))
       .finally(() => setBusy(false))
@@ -666,7 +982,11 @@ function Chat({ book, page, go, onProfileChange }) {
     <>
       <select value={chatId ?? ''} aria-label="Choose a chat" onChange={(e) => open(Number(e.target.value) || null)}>
         <option value="">New chat</option>
-        {chats.map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}
+        {byChapter.map((c) => (
+          <optgroup key={c.start} label={c.title}>
+            {c.chats.map((x) => <option key={x.id} value={x.id}>{x.title}</option>)}
+          </optgroup>
+        ))}
       </select>
       <div className="messages">
         {messages.length === 0 && !busy && (

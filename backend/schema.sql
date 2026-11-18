@@ -149,6 +149,34 @@ ALTER TABLE skill_evidence DROP CONSTRAINT IF EXISTS skill_evidence_book_id_fkey
 ALTER TABLE skill_evidence ADD CONSTRAINT skill_evidence_book_id_fkey
     FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE SET NULL;
 
+-- Chapter guide ---------------------------------------------------------
+
+-- A whole chapter (or section) in one guide. One per page range, made when the reader asks.
+CREATE TABLE IF NOT EXISTS chapter_guides (
+    book_id     BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    start_page  INT NOT NULL,
+    end_page    INT NOT NULL,
+    level       TEXT NOT NULL,     -- the reader's level when it was made
+    guide_json  JSONB NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (book_id, start_page, end_page)
+);
+
+-- Highlights ------------------------------------------------------------
+
+-- Text the reader marked on a page. rects: [[left, top, width, height], ...] as parts of the page
+-- size (0 to 1), so they fit at any zoom.
+CREATE TABLE IF NOT EXISTS highlights (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    book_id     BIGINT NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    page_no     INT NOT NULL,
+    color       TEXT NOT NULL,     -- yellow | green | pink | blue
+    text        TEXT NOT NULL,
+    rects       JSONB NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS highlights_book ON highlights (book_id, page_no);
+
 CREATE TABLE IF NOT EXISTS usage_log (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

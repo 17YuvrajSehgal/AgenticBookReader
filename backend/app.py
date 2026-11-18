@@ -27,7 +27,7 @@ import llm
 import reader_profile as profile
 import search
 import storage
-from parsing import page_image, parse_pdf, toc
+from parsing import chapters, figure_pages, page_image, parse_pdf, toc
 
 HERE = Path(__file__).parent
 # Login by magic link is on when SMTP_HOST is set. APP_URL is where the reader opens the app.
@@ -187,6 +187,8 @@ def export_data(response: Response, user: dict = Depends(current_user)):
                             "WHERE user_id = %s ORDER BY id", uid),
         "books": q(f"SELECT {BOOK_COLS} FROM books WHERE user_id = %s ORDER BY id", uid),
         "chats": q("SELECT id, book_id, title, created_at FROM chats WHERE user_id = %s ORDER BY id", uid),
+        "highlights": q("SELECT h.book_id, h.page_no, h.color, h.text, h.created_at FROM highlights h "
+                        "JOIN books b ON b.id = h.book_id WHERE b.user_id = %s ORDER BY h.id", uid),
         "messages": q("SELECT m.chat_id, m.role, m.text, m.page_no, m.source_pages, m.created_at FROM messages m "
                       "JOIN chats c ON c.id = m.chat_id WHERE c.user_id = %s ORDER BY m.id", uid),
         "usage": q("SELECT feature, model, tokens_in, tokens_out, ms, created_at FROM usage_log "
@@ -498,6 +500,52 @@ def page_check(book_id: int, page_no: int, user: dict = Depends(current_user)):
     return cached()
 
 
+MAX_GUIDE_PAGES = 60  # about 60,000 input tokens for a dense book. Same number as GUIDE_MAX_PAGES in App.jsx.
+
+
+@app.get("/api/books/{book_id}/guide")
+def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, user: dict = Depends(current_user)):
+    """Pages start..end (a chapter or a section) as one guide: the key ideas, the details that are easy
+    to miss, and a line for every page. only_saved: never call the LLM."""
+    book = get_book(book_id, user)
+    if not 1 <= start <= end <= (book["page_count"] or 0):
+        raise HTTPException(422, "These pages are not in the book")
+    if end - start + 1 > MAX_GUIDE_PAGES:
+        raise HTTPException(422, f"This part is longer than {MAX_GUIDE_PAGES} pages. Pick a smaller section.")
+
+    def cached():
+        rows = q("SELECT guide_json, level FROM chapter_guides WHERE book_id = %s AND start_page = %s "
+                 "AND end_page = %s", (book_id, start, end))
+        return {**rows[0]["guide_json"], "level": rows[0]["level"]} if rows else None
+
+    if guide := cached():
+        return guide
+    if only_saved:
+        return {"not_made": True}
+    pages = q("SELECT page_no, text_md FROM pages WHERE book_id = %s AND page_no BETWEEN %s AND %s ORDER BY page_no",
+              (book_id, start, end))
+    if sum(len(p["text_md"].strip()) for p in pages) < MIN_PAGE_CHARS:
+        raise HTTPException(404, "No text found on these pages. They may be pictures or scanned pages.")
+    # ponytail: the level comes from the pages of the chapter that are already tagged (no tagging calls
+    # here), and the guide is made once at that level. Add a level to the key if readers want it remade.
+    tags = q("SELECT DISTINCT unnest(skills) AS skill FROM pages WHERE book_id = %s AND page_no BETWEEN %s AND %s",
+             (book_id, start, end))
+    level = profile.page_level([s["level"] for s in skill_rows(user["id"], [t["skill"] for t in tags])])
+    figures = figure_pages(book["file_path"], start, end)
+    with llm_lock:  # ponytail: a long call (up to minutes). Page cards wait behind it; see llm_lock.
+        if guide := cached():
+            return guide
+        try:
+            result, usage = llm.chapter_guide(book["title"], [(p["page_no"], p["text_md"]) for p in pages],
+                                              figures, level)
+        except llm.LLMError as e:
+            raise HTTPException(502, str(e))
+        q("INSERT INTO chapter_guides (book_id, start_page, end_page, level, guide_json) VALUES (%s, %s, %s, %s, %s) "
+          "ON CONFLICT DO NOTHING", (book_id, start, end, level, Jsonb(llm.checked_guide(result, start, end, figures))))
+        log_usage(user["id"], "chapter_guide", usage)
+    return cached()
+
+
 @app.get("/api/books/{book_id}/toc")
 def book_toc(book_id: int, user: dict = Depends(current_user)):
     """The book's own table of contents, in order: level 1 is a chapter, 2 a section inside it, and so on.
@@ -505,6 +553,97 @@ def book_toc(book_id: int, user: dict = Depends(current_user)):
     book = get_book(book_id, user)
     return [{"level": level, "title": title.strip(), "page": page}
             for level, title, page in toc(book["file_path"]) if page >= 1]
+
+
+@app.get("/api/books/{book_id}/chapters")
+def book_chapters(book_id: int, user: dict = Depends(current_user)):
+    """The book cut into chapters, [{title, start, end}]. Notes, chats and highlights are grouped by these."""
+    book = get_book(book_id, user)
+    return chapters(toc(book["file_path"]), book["page_count"] or 0)
+
+
+# ---- highlights and the notes of a book ------------------------------------
+
+HIGHLIGHT_COLS = "id, page_no, color, text, rects, created_at"
+
+
+class Highlight(BaseModel):
+    page: int = Field(ge=1)
+    color: Literal["yellow", "green", "pink", "blue"]
+    text: str = Field(min_length=1, max_length=2000)
+    # One box per line of text: left, top, width, height, each a part of the page size.
+    rects: list[tuple[float, float, float, float]] = Field(min_length=1, max_length=200)
+
+
+@app.get("/api/books/{book_id}/highlights")
+def list_highlights(book_id: int, user: dict = Depends(current_user)):
+    get_book(book_id, user)
+    return q(f"SELECT {HIGHLIGHT_COLS} FROM highlights WHERE book_id = %s ORDER BY page_no, id", (book_id,))
+
+
+@app.post("/api/books/{book_id}/highlights")
+def add_highlight(book_id: int, body: Highlight, user: dict = Depends(current_user)):
+    book = get_book(book_id, user)
+    if body.page > (book["page_count"] or 0) or any(not 0 <= v <= 1 for rect in body.rects for v in rect):
+        raise HTTPException(422, "This highlight is not on the page")
+    return q(f"INSERT INTO highlights (book_id, page_no, color, text, rects) VALUES (%s, %s, %s, %s, %s) "
+             f"RETURNING {HIGHLIGHT_COLS}", (book_id, body.page, body.color, body.text, Jsonb(body.rects)))[0]
+
+
+@app.delete("/api/highlights/{highlight_id}")
+def delete_highlight(highlight_id: int, user: dict = Depends(current_user)):
+    q("DELETE FROM highlights h USING books b WHERE h.id = %s AND b.id = h.book_id AND b.user_id = %s",
+      (highlight_id, user["id"]))
+    return {}
+
+
+# The newest saved summary of each page, whatever level it was written for.
+CARDS_SQL = ("SELECT DISTINCT ON (page_no) page_no, card_json->'bullets' AS bullets FROM page_cards "
+             "WHERE book_id = %s {more} ORDER BY page_no, created_at DESC")
+
+
+def chat_list(book_id: int, user_id: int) -> list[dict]:
+    """page_no: the page the chat started on. It decides the chapter the chat is shown under."""
+    return q("SELECT c.id, c.title, c.created_at, "
+             "(SELECT m.page_no FROM messages m WHERE m.chat_id = c.id ORDER BY m.id LIMIT 1) AS page_no "
+             "FROM chats c WHERE c.book_id = %s AND c.user_id = %s ORDER BY c.created_at DESC", (book_id, user_id))
+
+
+@app.get("/api/books/{book_id}/notes")
+def book_notes(book_id: int, user: dict = Depends(current_user)):
+    """Everything saved for this book that has a page: summaries, chats, chapter guides. No LLM call.
+    The app groups it by chapter. Highlights come from their own endpoint."""
+    get_book(book_id, user)
+    return {
+        "cards": q(CARDS_SQL.format(more=""), (book_id,)),
+        "chats": chat_list(book_id, user["id"]),
+        "guides": q("SELECT start_page, end_page, guide_json->>'summary' AS summary FROM chapter_guides "
+                    "WHERE book_id = %s ORDER BY start_page, end_page DESC", (book_id,)),
+    }
+
+
+def reader_notes(book: dict, user_id: int, page_no: int, pages: list[int], chat_id: int | None) -> dict:
+    """What the reader already saved around a question, for the chat. `pages` are the pages the book
+    search found. Everything here is looked up by page number: no second search, no LLM call."""
+    bid = book["id"]
+    chapter = next(c for c in reversed(chapters(toc(book["file_path"]), book["page_count"])) if c["start"] <= page_no)
+    guide = q("SELECT guide_json->>'summary' AS summary FROM chapter_guides WHERE book_id = %s AND start_page <= %s "
+              "AND end_page >= %s ORDER BY end_page - start_page DESC LIMIT 1", (bid, page_no, page_no))
+    return {
+        "chapter": chapter["title"],
+        "chapter_summary": guide[0]["summary"] if guide else None,
+        "cards": q(CARDS_SQL.format(more="AND page_no = ANY(%s)"), (bid, pages)),
+        "highlights": q("SELECT page_no, text FROM highlights WHERE book_id = %s AND page_no = ANY(%s) "
+                        "ORDER BY page_no, id LIMIT 12", (bid, pages)),
+        # ponytail: the last 3 questions from other chats in this chapter, not the best-matching ones.
+        # Search over old messages if chapters get many chats.
+        "earlier": q("SELECT a.text AS question, b.text AS answer FROM messages a "
+                     "JOIN chats c ON c.id = a.chat_id "
+                     "JOIN messages b ON b.id = (SELECT min(id) FROM messages WHERE chat_id = a.chat_id AND id > a.id) "
+                     "WHERE c.book_id = %s AND c.user_id = %s AND a.role = 'user' AND b.role = 'assistant' "
+                     "AND a.page_no BETWEEN %s AND %s AND a.chat_id IS DISTINCT FROM %s ORDER BY a.id DESC LIMIT 3",
+                     (bid, user_id, chapter["start"], chapter["end"], chat_id))[::-1],
+    }
 
 
 @app.get("/api/usage")
@@ -667,8 +806,7 @@ class Ask(BaseModel):
 
 @app.get("/api/books/{book_id}/chats")
 def list_chats(book_id: int, user: dict = Depends(current_user)):
-    return q("SELECT id, title, created_at FROM chats WHERE book_id = %s AND user_id = %s ORDER BY created_at DESC",
-             (book_id, user["id"]))
+    return chat_list(book_id, user["id"])
 
 
 @app.get("/api/chats/{chat_id}/messages")
@@ -697,10 +835,12 @@ def ask(book_id: int, body: Ask, user: dict = Depends(current_user)):
     hits = search.search(question, user["id"], book_id, max_page=None if body.whole_book else body.page)
     _, level = level_of_page(user["id"], book_id, body.page)
     skills = known_skills(user["id"])
+    # The search found the pages. What the reader saved on those pages is read straight from the database.
+    notes = reader_notes(book, user["id"], body.page, sorted({h["page_no"] for h in hits} | {body.page}), body.chat_id)
     with llm_lock:
         try:
             result, usage = llm.answer(question, body.page, text, hits, history, level, skills,
-                                       page_image(book["file_path"], body.page))
+                                       page_image(book["file_path"], body.page), notes)
         except llm.LLMError as e:
             raise HTTPException(502, str(e))  # nothing is saved; the reader can ask again
 
