@@ -1,0 +1,12 @@
+# Install torch first, from the CUDA index (the RTX 5060 needs cu128):
+#   uv pip install torch --index-url https://download.pytorch.org/whl/cu128
+fastapi>=0.115
+uvicorn>=0.32
+python-multipart>=0.0.12
+psycopg[binary,pool]>=3.2.10
+pymupdf>=1.26
+torch>=2.11
+FlagEmbedding>=1.4.2
+qdrant-client>=1.20,<1.21
+anthropic>=2.10    # only used with LLM_PROVIDER=api
+boto3>=1.44        # only used with S3_BUCKET

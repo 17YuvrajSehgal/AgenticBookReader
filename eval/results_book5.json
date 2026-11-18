@@ -1,0 +1,3639 @@
+{
+  "book_id": 5,
+  "n_questions": 50,
+  "embedder": "BAAI/bge-m3",
+  "reranker": "BAAI/bge-reranker-v2-m3",
+  "chunk_words": 300,
+  "results": {
+    "dense": {
+      "recall@5": 0.88,
+      "mrr@10": 0.8033888888888889,
+      "recall@5_near": 0.88,
+      "mrr@10_near": 0.8287222222222222,
+      "ms_per_query": 52
+    },
+    "sparse": {
+      "recall@5": 0.96,
+      "mrr@10": 0.858,
+      "recall@5_near": 0.96,
+      "mrr@10_near": 0.8640000000000001,
+      "ms_per_query": 45
+    },
+    "hybrid": {
+      "recall@5": 0.94,
+      "mrr@10": 0.8476031746031747,
+      "recall@5_near": 0.96,
+      "mrr@10_near": 0.8514126984126985,
+      "ms_per_query": 64
+    },
+    "hybrid_rerank": {
+      "recall@5": 0.98,
+      "mrr@10": 0.9733333333333333,
+      "recall@5_near": 0.98,
+      "mrr@10_near": 0.9733333333333333,
+      "ms_per_query": 1105
+    }
+  },
+  "details": [
+    {
+      "mode": "dense",
+      "page": 51,
+      "question": "What distinguishes AI engineering from traditional ML engineering in terms of what the practitioner does with models?",
+      "top_pages": [
+        98,
+        113,
+        97,
+        100,
+        33,
+        106,
+        92,
+        107,
+        56,
+        51
+      ],
+      "rank": 10
+    },
+    {
+      "mode": "dense",
+      "page": 69,
+      "question": "In the study of occupation-specific writing tasks with 453 professionals, by how much did average task time drop and output quality rise for those given ChatGPT?",
+      "top_pages": [
+        69,
+        9,
+        73,
+        52,
+        719,
+        573,
+        466,
+        840,
+        178,
+        574
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 100,
+      "question": "What are the three main responsibilities of the model development layer in the AI engineering stack?",
+      "top_pages": [
+        94,
+        93,
+        100,
+        107,
+        95,
+        113,
+        91,
+        112,
+        20,
+        96
+      ],
+      "rank": 3
+    },
+    {
+      "mode": "dense",
+      "page": 123,
+      "question": "How did Gunasekar et al. (2023) show that a smaller model with high-quality data can beat larger models on coding benchmarks?",
+      "top_pages": [
+        44,
+        714,
+        162,
+        715,
+        159,
+        386,
+        168,
+        229,
+        697,
+        704
+      ],
+      "rank": null
+    },
+    {
+      "mode": "dense",
+      "page": 144,
+      "question": "What does the final module after the transformer blocks do, and what is it sometimes called?",
+      "top_pages": [
+        144,
+        143,
+        136,
+        120,
+        149,
+        139,
+        138,
+        145,
+        987,
+        147
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 169,
+      "question": "What two problems with pre-trained models is post-training meant to fix?",
+      "top_pages": [
+        169,
+        103,
+        170,
+        102,
+        974,
+        120,
+        954,
+        179,
+        251,
+        652
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 173,
+      "question": "What is the term for the (prompt, response) example pairs used to teach a model to respond conversationally, and what is this process informally called?",
+      "top_pages": [
+        420,
+        422,
+        490,
+        416,
+        178,
+        175,
+        421,
+        173,
+        423,
+        182
+      ],
+      "rank": 8
+    },
+    {
+      "mode": "dense",
+      "page": 181,
+      "question": "Why did Meta move from RLHF to DPO between Llama 2 and Llama 3?",
+      "top_pages": [
+        181,
+        170,
+        361,
+        146,
+        710,
+        740,
+        151,
+        708,
+        709,
+        186
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 185,
+      "question": "What objective is used to train a reward model from comparison data, according to the InstructGPT formula?",
+      "top_pages": [
+        185,
+        183,
+        186,
+        174,
+        181,
+        954,
+        184,
+        347,
+        170,
+        420
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 234,
+      "question": "Why does evaluation get harder as AI models become more intelligent, as illustrated by book summaries?",
+      "top_pages": [
+        309,
+        234,
+        232,
+        236,
+        387,
+        239,
+        307,
+        311,
+        310,
+        411
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 235,
+      "question": "Why is it hard to judge open-ended foundation model outputs against ground truths, compared with classification models in traditional ML?",
+      "top_pages": [
+        235,
+        234,
+        97,
+        107,
+        309,
+        108,
+        98,
+        368,
+        56,
+        104
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 246,
+      "question": "If a language model has a bits-per-character of 3 and each character is 7 bits, what bits-per-byte value results, and what does that imply about compression?",
+      "top_pages": [
+        246,
+        245,
+        634,
+        36,
+        962,
+        243,
+        247,
+        312,
+        691,
+        242
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 322,
+      "question": "Besides accuracy, which metrics are commonly used for classification tasks, which are treated as multiple choice with identical choices for every question?",
+      "top_pages": [
+        322,
+        258,
+        248,
+        259,
+        263,
+        333,
+        380,
+        241,
+        949,
+        401
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 339,
+      "question": "How many naturally occurring prompts does the RealToxicityPrompts benchmark contain, and what is it designed to elicit from models?",
+      "top_pages": [
+        339,
+        305,
+        491,
+        418,
+        492,
+        466,
+        484,
+        469,
+        428,
+        478
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 371,
+      "question": "Why is it beneficial to choose a model that follows a standard API, and whose API do many providers imitate?",
+      "top_pages": [
+        371,
+        364,
+        363,
+        370,
+        372,
+        375,
+        413,
+        367,
+        377,
+        374
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 381,
+      "question": "Which eight benchmarks besides the Hugging Face leaderboard's are included in HELM Lite, and what criticism is raised about how coverage is chosen?",
+      "top_pages": [
+        381,
+        379,
+        382,
+        383,
+        380,
+        414,
+        384,
+        392,
+        305,
+        236
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 392,
+      "question": "How many benchmarks did OpenAI find to have at least 40% of their data in GPT-3's training set, and what do they recommend public benchmarks do to combat contamination?",
+      "top_pages": [
+        392,
+        386,
+        388,
+        168,
+        382,
+        770,
+        389,
+        122,
+        390,
+        413
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 393,
+      "question": "In the example of extracting a person's current employer from a resume PDF, what two steps make up the pipeline that should each be evaluated independently?",
+      "top_pages": [
+        393,
+        394,
+        950,
+        616,
+        408,
+        984,
+        398,
+        396,
+        358,
+        407
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 417,
+      "question": "What did the OpenAI research manager say is the real problem regarding prompt engineering as a skill?",
+      "top_pages": [
+        417,
+        491,
+        416,
+        99,
+        109,
+        432,
+        607,
+        411,
+        490,
+        55
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 456,
+      "question": "Why can prompt engineering tools unexpectedly inflate API bills?",
+      "top_pages": [
+        457,
+        456,
+        370,
+        464,
+        109,
+        414,
+        890,
+        491,
+        89,
+        463
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 465,
+      "question": "What is the term for figuring out the hidden system prompt behind an AI application, and why might bad actors want to do it?",
+      "top_pages": [
+        465,
+        424,
+        469,
+        463,
+        466,
+        468,
+        889,
+        489,
+        472,
+        473
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 472,
+      "question": "In the PAIR method for automated prompt attacks, what role does the attacker AI play and what steps does it follow against the target AI?",
+      "top_pages": [
+        472,
+        473,
+        469,
+        475,
+        468,
+        83,
+        486,
+        489,
+        277,
+        961
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 486,
+      "question": "When safety-finetuning a model, why should it be trained to handle borderline requests like asking how to get into a locked room, and what response is ideal?",
+      "top_pages": [
+        486,
+        173,
+        652,
+        441,
+        467,
+        594,
+        490,
+        597,
+        468,
+        169
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 491,
+      "question": "Why does the book say a model needs more than instructions to accomplish a task, and what topic is covered in the following chapter?",
+      "top_pages": [
+        494,
+        20,
+        419,
+        120,
+        173,
+        226,
+        21,
+        121,
+        594,
+        490
+      ],
+      "rank": null
+    },
+    {
+      "mode": "dense",
+      "page": 494,
+      "question": "What are the two dominant patterns for constructing context for a model, and how does each one gather information?",
+      "top_pages": [
+        494,
+        855,
+        440,
+        422,
+        498,
+        226,
+        497,
+        441,
+        20,
+        135
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 517,
+      "question": "How do HNSW and LSH compare in terms of index build cost versus query accuracy and speed?",
+      "top_pages": [
+        517,
+        511,
+        956,
+        790,
+        789,
+        414,
+        516,
+        229,
+        874,
+        833
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 521,
+      "question": "What is recursive chunking of documents, and how does it reduce the chance of splitting related text apart?",
+      "top_pages": [
+        521,
+        522,
+        523,
+        500,
+        503,
+        520,
+        526,
+        529,
+        527,
+        528
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 554,
+      "question": "What is the main difference between reinforcement learning agents and foundation model agents in how their planners work?",
+      "top_pages": [
+        554,
+        552,
+        170,
+        181,
+        105,
+        933,
+        186,
+        78,
+        97,
+        20
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 577,
+      "question": "In agent planning failures, what is an example of calling a valid tool with incorrect parameter values, such as with the lbs_to_kg tool?",
+      "top_pages": [
+        577,
+        579,
+        561,
+        562,
+        578,
+        559,
+        580,
+        573,
+        576,
+        569
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 583,
+      "question": "How should information be allocated among internal knowledge, long-term memory, and short-term memory based on how frequently it is needed?",
+      "top_pages": [
+        583,
+        587,
+        582,
+        586,
+        623,
+        777,
+        965,
+        622,
+        585,
+        823
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 601,
+      "question": "Why might an application developer usually end up finetuning a model that has already been post-trained rather than a raw pre-trained one?",
+      "top_pages": [
+        103,
+        601,
+        102,
+        170,
+        169,
+        99,
+        179,
+        186,
+        594,
+        113
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 619,
+      "question": "How much memory would the weights of a 13-billion-parameter model need in 32-bit format versus when each value is reduced to 2 bytes?",
+      "top_pages": [
+        631,
+        640,
+        624,
+        625,
+        661,
+        627,
+        151,
+        635,
+        619,
+        246
+      ],
+      "rank": 9
+    },
+    {
+      "mode": "dense",
+      "page": 631,
+      "question": "What went wrong when many teams loaded Llama 2 in FP16 even though it was released with BF16 weights?",
+      "top_pages": [
+        631,
+        661,
+        662,
+        635,
+        691,
+        361,
+        656,
+        795,
+        796,
+        151
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 671,
+      "question": "What is a task vector, and how can it be used to remove undesirable behaviors from a model?",
+      "top_pages": [
+        671,
+        674,
+        395,
+        141,
+        256,
+        338,
+        140,
+        255,
+        573,
+        139
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 677,
+      "question": "Which technique did Kim et al. (2023) use to build SOLAR 10.7B from a 7B-parameter model with 32 layers?",
+      "top_pages": [
+        678,
+        677,
+        142,
+        675,
+        662,
+        151,
+        668,
+        672,
+        649,
+        753
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 688,
+      "question": "Why did full finetuning become impractical for most practitioners as models grew larger?",
+      "top_pages": [
+        686,
+        688,
+        639,
+        604,
+        608,
+        714,
+        641,
+        594,
+        682,
+        644
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 696,
+      "question": "How does data-centric AI differ from model-centric AI in how it tries to improve performance?",
+      "top_pages": [
+        696,
+        694,
+        105,
+        179,
+        121,
+        714,
+        697,
+        307,
+        808,
+        104
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 709,
+      "question": "Besides domain, what other diversity axes does post-training data have, and what extra dimension applies to Llama 3 because of its synthetic data?",
+      "top_pages": [
+        709,
+        710,
+        740,
+        146,
+        708,
+        744,
+        361,
+        712,
+        170,
+        747
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 718,
+      "question": "Why do additional finetuning examples typically give diminishing returns as the dataset grows, according to the performance gain curve?",
+      "top_pages": [
+        718,
+        715,
+        714,
+        716,
+        685,
+        719,
+        686,
+        717,
+        641,
+        720
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 731,
+      "question": "What is procedural generation, and how can a template with a tool like Faker be used to create synthetic credit card transactions?",
+      "top_pages": [
+        731,
+        732,
+        737,
+        771,
+        727,
+        555,
+        77,
+        335,
+        545,
+        726
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 744,
+      "question": "When extending a model from an 8K-token limit toward 128K using synthetic data, what source text is used as the context for each generated question-answer pair?",
+      "top_pages": [
+        744,
+        726,
+        36,
+        728,
+        196,
+        230,
+        428,
+        732,
+        44,
+        754
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 763,
+      "question": "What improvements did Databricks report after stripping stray Markdown and HTML tokens from their training data?",
+      "top_pages": [
+        763,
+        771,
+        713,
+        697,
+        122,
+        735,
+        121,
+        389,
+        391,
+        690
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 770,
+      "question": "In the footnote comparing GPT-3 and GPT-4 contributor lists, roughly how many people were credited with data work for GPT-4 versus GPT-3?",
+      "top_pages": [
+        770,
+        758,
+        757,
+        392,
+        128,
+        386,
+        662,
+        690,
+        347,
+        312
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 780,
+      "question": "Why is the prefill step of language model inference limited by compute, while the decode step is limited by memory bandwidth?",
+      "top_pages": [
+        780,
+        781,
+        836,
+        851,
+        777,
+        814,
+        837,
+        623,
+        620,
+        246
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 807,
+      "question": "Which three key numbers help decide whether a chip can run your workload and how long it will take?",
+      "top_pages": [
+        801,
+        807,
+        158,
+        156,
+        806,
+        792,
+        796,
+        157,
+        802,
+        160
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 834,
+      "question": "How does a batching method that processes a batch when it fills up or when a time window like 100 ms expires differ from one that waits for a fixed number of requests?",
+      "top_pages": [
+        834,
+        835,
+        782,
+        784,
+        849,
+        884,
+        789,
+        838,
+        787,
+        845
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 846,
+      "question": "What is the difference between model-level and inference service-level optimization in terms of effect on model behavior?",
+      "top_pages": [
+        808,
+        846,
+        775,
+        773,
+        809,
+        774,
+        848,
+        105,
+        847,
+        776
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "dense",
+      "page": 847,
+      "question": "Why might a team prioritizing low latency over cost choose to scale up replica parallelism?",
+      "top_pages": [
+        841,
+        351,
+        845,
+        844,
+        842,
+        848,
+        162,
+        851,
+        447,
+        850
+      ],
+      "rank": null
+    },
+    {
+      "mode": "dense",
+      "page": 854,
+      "question": "What is the suggested order of components to add when expanding a basic AI application architecture, starting with context enhancement?",
+      "top_pages": [
+        854,
+        875,
+        855,
+        50,
+        853,
+        78,
+        83,
+        96,
+        865,
+        32
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "dense",
+      "page": 863,
+      "question": "What are the benefits of using a router to send different queries to different models instead of one model for everything?",
+      "top_pages": [
+        863,
+        866,
+        865,
+        864,
+        659,
+        867,
+        842,
+        497,
+        660,
+        374
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 51,
+      "question": "What distinguishes AI engineering from traditional ML engineering in terms of what the practitioner does with models?",
+      "top_pages": [
+        97,
+        113,
+        51,
+        100,
+        112,
+        107,
+        98,
+        33,
+        56,
+        14
+      ],
+      "rank": 3
+    },
+    {
+      "mode": "sparse",
+      "page": 69,
+      "question": "In the study of occupation-specific writing tasks with 453 professionals, by how much did average task time drop and output quality rise for those given ChatGPT?",
+      "top_pages": [
+        69,
+        9,
+        573,
+        216,
+        608,
+        108,
+        770,
+        395,
+        206,
+        32
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 100,
+      "question": "What are the three main responsibilities of the model development layer in the AI engineering stack?",
+      "top_pages": [
+        100,
+        94,
+        93,
+        107,
+        95,
+        676,
+        967,
+        935,
+        106,
+        677
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 123,
+      "question": "How did Gunasekar et al. (2023) show that a smaller model with high-quality data can beat larger models on coding benchmarks?",
+      "top_pages": [
+        123,
+        44,
+        389,
+        153,
+        697,
+        710,
+        712,
+        388,
+        704,
+        608
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 144,
+      "question": "What does the final module after the transformer blocks do, and what is it sometimes called?",
+      "top_pages": [
+        144,
+        143,
+        987,
+        643,
+        149,
+        136,
+        937,
+        145,
+        146,
+        147
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 169,
+      "question": "What two problems with pre-trained models is post-training meant to fix?",
+      "top_pages": [
+        169,
+        170,
+        251,
+        102,
+        751,
+        713,
+        103,
+        637,
+        974,
+        954
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 173,
+      "question": "What is the term for the (prompt, response) example pairs used to teach a model to respond conversationally, and what is this process informally called?",
+      "top_pages": [
+        178,
+        435,
+        434,
+        898,
+        173,
+        294,
+        293,
+        442,
+        441,
+        422
+      ],
+      "rank": 5
+    },
+    {
+      "mode": "sparse",
+      "page": 181,
+      "question": "Why did Meta move from RLHF to DPO between Llama 2 and Llama 3?",
+      "top_pages": [
+        181,
+        361,
+        170,
+        426,
+        151,
+        708,
+        153,
+        186,
+        710,
+        337
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 185,
+      "question": "What objective is used to train a reward model from comparison data, according to the InstructGPT formula?",
+      "top_pages": [
+        185,
+        183,
+        178,
+        184,
+        698,
+        742,
+        223,
+        608,
+        186,
+        365
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 234,
+      "question": "Why does evaluation get harder as AI models become more intelligent, as illustrated by book summaries?",
+      "top_pages": [
+        234,
+        232,
+        309,
+        20,
+        272,
+        12,
+        315,
+        301,
+        239,
+        307
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 235,
+      "question": "Why is it hard to judge open-ended foundation model outputs against ground truths, compared with classification models in traditional ML?",
+      "top_pages": [
+        235,
+        104,
+        98,
+        784,
+        213,
+        107,
+        234,
+        113,
+        278,
+        253
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 246,
+      "question": "If a language model has a bits-per-character of 3 and each character is 7 bits, what bits-per-byte value results, and what does that imply about compression?",
+      "top_pages": [
+        246,
+        245,
+        241,
+        962,
+        809,
+        634,
+        312,
+        35,
+        36,
+        242
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 322,
+      "question": "Besides accuracy, which metrics are commonly used for classification tasks, which are treated as multiple choice with identical choices for every question?",
+      "top_pages": [
+        322,
+        253,
+        269,
+        257,
+        442,
+        550,
+        207,
+        324,
+        318,
+        885
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 339,
+      "question": "How many naturally occurring prompts does the RealToxicityPrompts benchmark contain, and what is it designed to elicit from models?",
+      "top_pages": [
+        339,
+        491,
+        448,
+        432,
+        454,
+        490,
+        416,
+        460,
+        109,
+        455
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 371,
+      "question": "Why is it beneficial to choose a model that follows a standard API, and whose API do many providers imitate?",
+      "top_pages": [
+        363,
+        371,
+        364,
+        375,
+        372,
+        370,
+        369,
+        376,
+        683,
+        365
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "sparse",
+      "page": 381,
+      "question": "Which eight benchmarks besides the Hugging Face leaderboard's are included in HELM Lite, and what criticism is raised about how coverage is chosen?",
+      "top_pages": [
+        381,
+        379,
+        414,
+        380,
+        383,
+        382,
+        384,
+        392,
+        491,
+        361
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 392,
+      "question": "How many benchmarks did OpenAI find to have at least 40% of their data in GPT-3's training set, and what do they recommend public benchmarks do to combat contamination?",
+      "top_pages": [
+        392,
+        770,
+        608,
+        389,
+        386,
+        388,
+        168,
+        122,
+        985,
+        390
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 393,
+      "question": "In the example of extracting a person's current employer from a resume PDF, what two steps make up the pipeline that should each be evaluated independently?",
+      "top_pages": [
+        393,
+        394,
+        398,
+        984,
+        316,
+        409,
+        407,
+        405,
+        950,
+        408
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 417,
+      "question": "What did the OpenAI research manager say is the real problem regarding prompt engineering as a skill?",
+      "top_pages": [
+        417,
+        466,
+        411,
+        416,
+        432,
+        490,
+        442,
+        485,
+        454,
+        491
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 456,
+      "question": "Why can prompt engineering tools unexpectedly inflate API bills?",
+      "top_pages": [
+        456,
+        458,
+        454,
+        453,
+        976,
+        857,
+        423,
+        491,
+        109,
+        855
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 465,
+      "question": "What is the term for figuring out the hidden system prompt behind an AI application, and why might bad actors want to do it?",
+      "top_pages": [
+        889,
+        465,
+        424,
+        489,
+        99,
+        490,
+        283,
+        21,
+        887,
+        469
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "sparse",
+      "page": 472,
+      "question": "In the PAIR method for automated prompt attacks, what role does the attacker AI play and what steps does it follow against the target AI?",
+      "top_pages": [
+        472,
+        473,
+        961,
+        417,
+        975,
+        469,
+        488,
+        493,
+        483,
+        462
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 486,
+      "question": "When safety-finetuning a model, why should it be trained to handle borderline requests like asking how to get into a locked room, and what response is ideal?",
+      "top_pages": [
+        486,
+        186,
+        185,
+        180,
+        698,
+        20,
+        173,
+        178,
+        600,
+        169
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 491,
+      "question": "Why does the book say a model needs more than instructions to accomplish a task, and what topic is covered in the following chapter?",
+      "top_pages": [
+        494,
+        491,
+        50,
+        594,
+        742,
+        600,
+        49,
+        419,
+        764,
+        428
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "sparse",
+      "page": 494,
+      "question": "What are the two dominant patterns for constructing context for a model, and how does each one gather information?",
+      "top_pages": [
+        494,
+        497,
+        440,
+        441,
+        876,
+        589,
+        855,
+        21,
+        428,
+        854
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 517,
+      "question": "How do HNSW and LSH compare in terms of index build cost versus query accuracy and speed?",
+      "top_pages": [
+        517,
+        511,
+        956,
+        500,
+        510,
+        964,
+        518,
+        507,
+        516,
+        499
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 521,
+      "question": "What is recursive chunking of documents, and how does it reduce the chance of splitting related text apart?",
+      "top_pages": [
+        521,
+        522,
+        520,
+        523,
+        500,
+        526,
+        506,
+        507,
+        531,
+        717
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 554,
+      "question": "What is the main difference between reinforcement learning agents and foundation model agents in how their planners work?",
+      "top_pages": [
+        554,
+        170,
+        186,
+        535,
+        187,
+        559,
+        169,
+        540,
+        10,
+        552
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 577,
+      "question": "In agent planning failures, what is an example of calling a valid tool with incorrect parameter values, such as with the lbs_to_kg tool?",
+      "top_pages": [
+        577,
+        561,
+        579,
+        559,
+        578,
+        580,
+        563,
+        562,
+        558,
+        540
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 583,
+      "question": "How should information be allocated among internal knowledge, long-term memory, and short-term memory based on how frequently it is needed?",
+      "top_pages": [
+        583,
+        582,
+        587,
+        965,
+        960,
+        617,
+        498,
+        586,
+        584,
+        478
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 601,
+      "question": "Why might an application developer usually end up finetuning a model that has already been post-trained rather than a raw pre-trained one?",
+      "top_pages": [
+        601,
+        103,
+        169,
+        599,
+        170,
+        974,
+        186,
+        713,
+        677,
+        598
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 619,
+      "question": "How much memory would the weights of a 13-billion-parameter model need in 32-bit format versus when each value is reduced to 2 bytes?",
+      "top_pages": [
+        627,
+        631,
+        640,
+        635,
+        661,
+        662,
+        625,
+        691,
+        624,
+        623
+      ],
+      "rank": null
+    },
+    {
+      "mode": "sparse",
+      "page": 631,
+      "question": "What went wrong when many teams loaded Llama 2 in FP16 even though it was released with BF16 weights?",
+      "top_pages": [
+        631,
+        691,
+        662,
+        796,
+        795,
+        661,
+        360,
+        361,
+        640,
+        690
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 671,
+      "question": "What is a task vector, and how can it be used to remove undesirable behaviors from a model?",
+      "top_pages": [
+        671,
+        674,
+        267,
+        673,
+        269,
+        190,
+        509,
+        614,
+        613,
+        516
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 677,
+      "question": "Which technique did Kim et al. (2023) use to build SOLAR 10.7B from a 7B-parameter model with 32 layers?",
+      "top_pages": [
+        677,
+        678,
+        152,
+        164,
+        229,
+        647,
+        644,
+        655,
+        668,
+        640
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 688,
+      "question": "Why did full finetuning become impractical for most practitioners as models grew larger?",
+      "top_pages": [
+        603,
+        682,
+        639,
+        681,
+        671,
+        683,
+        594,
+        601,
+        595,
+        715
+      ],
+      "rank": null
+    },
+    {
+      "mode": "sparse",
+      "page": 696,
+      "question": "How does data-centric AI differ from model-centric AI in how it tries to improve performance?",
+      "top_pages": [
+        696,
+        697,
+        121,
+        749,
+        753,
+        735,
+        751,
+        187,
+        44,
+        32
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 709,
+      "question": "Besides domain, what other diversity axes does post-training data have, and what extra dimension applies to Llama 3 because of its synthetic data?",
+      "top_pages": [
+        709,
+        710,
+        740,
+        708,
+        747,
+        751,
+        361,
+        146,
+        170,
+        744
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 718,
+      "question": "Why do additional finetuning examples typically give diminishing returns as the dataset grows, according to the performance gain curve?",
+      "top_pages": [
+        718,
+        713,
+        715,
+        720,
+        717,
+        719,
+        682,
+        686,
+        714,
+        716
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 731,
+      "question": "What is procedural generation, and how can a template with a tool like Faker be used to create synthetic credit card transactions?",
+      "top_pages": [
+        731,
+        732,
+        771,
+        723,
+        742,
+        727,
+        749,
+        427,
+        769,
+        458
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 744,
+      "question": "When extending a model from an 8K-token limit toward 128K using synthetic data, what source text is used as the context for each generated question-answer pair?",
+      "top_pages": [
+        744,
+        178,
+        440,
+        441,
+        753,
+        754,
+        855,
+        730,
+        728,
+        600
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 763,
+      "question": "What improvements did Databricks report after stripping stray Markdown and HTML tokens from their training data?",
+      "top_pages": [
+        763,
+        713,
+        155,
+        154,
+        760,
+        703,
+        706,
+        697,
+        161,
+        767
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 770,
+      "question": "In the footnote comparing GPT-3 and GPT-4 contributor lists, roughly how many people were credited with data work for GPT-4 versus GPT-3?",
+      "top_pages": [
+        770,
+        757,
+        758,
+        131,
+        609,
+        36,
+        608,
+        392,
+        130,
+        663
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 780,
+      "question": "Why is the prefill step of language model inference limited by compute, while the decode step is limited by memory bandwidth?",
+      "top_pages": [
+        780,
+        781,
+        794,
+        851,
+        836,
+        837,
+        777,
+        139,
+        958,
+        789
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 807,
+      "question": "Which three key numbers help decide whether a chip can run your workload and how long it will take?",
+      "top_pages": [
+        801,
+        158,
+        807,
+        796,
+        805,
+        797,
+        803,
+        893,
+        628,
+        629
+      ],
+      "rank": 3
+    },
+    {
+      "mode": "sparse",
+      "page": 834,
+      "question": "How does a batching method that processes a batch when it fills up or when a time window like 100 ms expires differ from one that waits for a fixed number of requests?",
+      "top_pages": [
+        834,
+        782,
+        835,
+        833,
+        784,
+        849,
+        836,
+        938,
+        790,
+        36
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 846,
+      "question": "What is the difference between model-level and inference service-level optimization in terms of effect on model behavior?",
+      "top_pages": [
+        808,
+        809,
+        846,
+        833,
+        847,
+        773,
+        774,
+        784,
+        845,
+        958
+      ],
+      "rank": 3
+    },
+    {
+      "mode": "sparse",
+      "page": 847,
+      "question": "Why might a team prioritizing low latency over cost choose to scale up replica parallelism?",
+      "top_pages": [
+        844,
+        848,
+        841,
+        842,
+        847,
+        845,
+        979,
+        860,
+        843,
+        205
+      ],
+      "rank": 5
+    },
+    {
+      "mode": "sparse",
+      "page": 854,
+      "question": "What is the suggested order of components to add when expanding a basic AI application architecture, starting with context enhancement?",
+      "top_pages": [
+        854,
+        853,
+        926,
+        498,
+        855,
+        875,
+        856,
+        494,
+        29,
+        592
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "sparse",
+      "page": 863,
+      "question": "What are the benefits of using a router to send different queries to different models instead of one model for everything?",
+      "top_pages": [
+        863,
+        866,
+        865,
+        676,
+        665,
+        667,
+        864,
+        584,
+        296,
+        153
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 51,
+      "question": "What distinguishes AI engineering from traditional ML engineering in terms of what the practitioner does with models?",
+      "top_pages": [
+        97,
+        113,
+        98,
+        100,
+        51,
+        33,
+        107,
+        112,
+        106,
+        56
+      ],
+      "rank": 5
+    },
+    {
+      "mode": "hybrid",
+      "page": 69,
+      "question": "In the study of occupation-specific writing tasks with 453 professionals, by how much did average task time drop and output quality rise for those given ChatGPT?",
+      "top_pages": [
+        69,
+        9,
+        573,
+        73,
+        108,
+        608,
+        52,
+        216,
+        178,
+        719
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 100,
+      "question": "What are the three main responsibilities of the model development layer in the AI engineering stack?",
+      "top_pages": [
+        94,
+        100,
+        93,
+        107,
+        95,
+        113,
+        967,
+        106,
+        935,
+        676
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "hybrid",
+      "page": 123,
+      "question": "How did Gunasekar et al. (2023) show that a smaller model with high-quality data can beat larger models on coding benchmarks?",
+      "top_pages": [
+        44,
+        123,
+        714,
+        162,
+        153,
+        697,
+        389,
+        715,
+        704,
+        159
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "hybrid",
+      "page": 144,
+      "question": "What does the final module after the transformer blocks do, and what is it sometimes called?",
+      "top_pages": [
+        144,
+        143,
+        136,
+        987,
+        149,
+        643,
+        145,
+        138,
+        120,
+        139
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 169,
+      "question": "What two problems with pre-trained models is post-training meant to fix?",
+      "top_pages": [
+        169,
+        170,
+        103,
+        102,
+        251,
+        974,
+        954,
+        713,
+        637,
+        751
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 173,
+      "question": "What is the term for the (prompt, response) example pairs used to teach a model to respond conversationally, and what is this process informally called?",
+      "top_pages": [
+        178,
+        420,
+        422,
+        435,
+        490,
+        434,
+        173,
+        898,
+        416,
+        421
+      ],
+      "rank": 7
+    },
+    {
+      "mode": "hybrid",
+      "page": 181,
+      "question": "Why did Meta move from RLHF to DPO between Llama 2 and Llama 3?",
+      "top_pages": [
+        181,
+        170,
+        361,
+        151,
+        146,
+        426,
+        710,
+        708,
+        740,
+        186
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 185,
+      "question": "What objective is used to train a reward model from comparison data, according to the InstructGPT formula?",
+      "top_pages": [
+        185,
+        183,
+        186,
+        184,
+        178,
+        174,
+        698,
+        181,
+        608,
+        954
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 234,
+      "question": "Why does evaluation get harder as AI models become more intelligent, as illustrated by book summaries?",
+      "top_pages": [
+        234,
+        309,
+        232,
+        236,
+        387,
+        239,
+        20,
+        307,
+        272,
+        315
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 235,
+      "question": "Why is it hard to judge open-ended foundation model outputs against ground truths, compared with classification models in traditional ML?",
+      "top_pages": [
+        235,
+        234,
+        104,
+        98,
+        107,
+        97,
+        784,
+        108,
+        309,
+        113
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 246,
+      "question": "If a language model has a bits-per-character of 3 and each character is 7 bits, what bits-per-byte value results, and what does that imply about compression?",
+      "top_pages": [
+        246,
+        245,
+        634,
+        962,
+        241,
+        36,
+        312,
+        247,
+        242,
+        691
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 322,
+      "question": "Besides accuracy, which metrics are commonly used for classification tasks, which are treated as multiple choice with identical choices for every question?",
+      "top_pages": [
+        322,
+        253,
+        258,
+        248,
+        257,
+        269,
+        263,
+        259,
+        442,
+        333
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 339,
+      "question": "How many naturally occurring prompts does the RealToxicityPrompts benchmark contain, and what is it designed to elicit from models?",
+      "top_pages": [
+        339,
+        491,
+        305,
+        448,
+        432,
+        454,
+        466,
+        492,
+        418,
+        469
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 371,
+      "question": "Why is it beneficial to choose a model that follows a standard API, and whose API do many providers imitate?",
+      "top_pages": [
+        371,
+        363,
+        364,
+        375,
+        370,
+        372,
+        369,
+        376,
+        374,
+        367
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 381,
+      "question": "Which eight benchmarks besides the Hugging Face leaderboard's are included in HELM Lite, and what criticism is raised about how coverage is chosen?",
+      "top_pages": [
+        381,
+        379,
+        382,
+        414,
+        380,
+        383,
+        384,
+        392,
+        361,
+        378
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 392,
+      "question": "How many benchmarks did OpenAI find to have at least 40% of their data in GPT-3's training set, and what do they recommend public benchmarks do to combat contamination?",
+      "top_pages": [
+        392,
+        386,
+        770,
+        388,
+        389,
+        168,
+        608,
+        122,
+        390,
+        413
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 393,
+      "question": "In the example of extracting a person's current employer from a resume PDF, what two steps make up the pipeline that should each be evaluated independently?",
+      "top_pages": [
+        393,
+        394,
+        398,
+        950,
+        984,
+        408,
+        616,
+        407,
+        409,
+        405
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 417,
+      "question": "What did the OpenAI research manager say is the real problem regarding prompt engineering as a skill?",
+      "top_pages": [
+        417,
+        416,
+        491,
+        466,
+        411,
+        432,
+        490,
+        99,
+        109,
+        485
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 456,
+      "question": "Why can prompt engineering tools unexpectedly inflate API bills?",
+      "top_pages": [
+        456,
+        457,
+        458,
+        454,
+        109,
+        370,
+        491,
+        453,
+        464,
+        857
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 465,
+      "question": "What is the term for figuring out the hidden system prompt behind an AI application, and why might bad actors want to do it?",
+      "top_pages": [
+        465,
+        889,
+        424,
+        469,
+        489,
+        463,
+        490,
+        468,
+        466,
+        99
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 472,
+      "question": "In the PAIR method for automated prompt attacks, what role does the attacker AI play and what steps does it follow against the target AI?",
+      "top_pages": [
+        472,
+        473,
+        469,
+        961,
+        468,
+        475,
+        975,
+        417,
+        488,
+        489
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 486,
+      "question": "When safety-finetuning a model, why should it be trained to handle borderline requests like asking how to get into a locked room, and what response is ideal?",
+      "top_pages": [
+        486,
+        173,
+        186,
+        180,
+        652,
+        185,
+        698,
+        441,
+        20,
+        600
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 491,
+      "question": "Why does the book say a model needs more than instructions to accomplish a task, and what topic is covered in the following chapter?",
+      "top_pages": [
+        494,
+        20,
+        419,
+        491,
+        594,
+        50,
+        120,
+        49,
+        428,
+        173
+      ],
+      "rank": 4
+    },
+    {
+      "mode": "hybrid",
+      "page": 494,
+      "question": "What are the two dominant patterns for constructing context for a model, and how does each one gather information?",
+      "top_pages": [
+        494,
+        440,
+        855,
+        497,
+        441,
+        422,
+        498,
+        589,
+        428,
+        876
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 517,
+      "question": "How do HNSW and LSH compare in terms of index build cost versus query accuracy and speed?",
+      "top_pages": [
+        517,
+        511,
+        956,
+        964,
+        516,
+        510,
+        790,
+        500,
+        874,
+        789
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 521,
+      "question": "What is recursive chunking of documents, and how does it reduce the chance of splitting related text apart?",
+      "top_pages": [
+        521,
+        522,
+        523,
+        520,
+        500,
+        526,
+        503,
+        506,
+        838,
+        507
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 554,
+      "question": "What is the main difference between reinforcement learning agents and foundation model agents in how their planners work?",
+      "top_pages": [
+        554,
+        170,
+        552,
+        186,
+        181,
+        187,
+        535,
+        933,
+        559,
+        105
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 577,
+      "question": "In agent planning failures, what is an example of calling a valid tool with incorrect parameter values, such as with the lbs_to_kg tool?",
+      "top_pages": [
+        577,
+        579,
+        561,
+        559,
+        578,
+        562,
+        580,
+        576,
+        563,
+        573
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 583,
+      "question": "How should information be allocated among internal knowledge, long-term memory, and short-term memory based on how frequently it is needed?",
+      "top_pages": [
+        583,
+        587,
+        582,
+        965,
+        586,
+        623,
+        777,
+        960,
+        622,
+        617
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 601,
+      "question": "Why might an application developer usually end up finetuning a model that has already been post-trained rather than a raw pre-trained one?",
+      "top_pages": [
+        103,
+        601,
+        169,
+        170,
+        102,
+        186,
+        599,
+        179,
+        99,
+        713
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "hybrid",
+      "page": 619,
+      "question": "How much memory would the weights of a 13-billion-parameter model need in 32-bit format versus when each value is reduced to 2 bytes?",
+      "top_pages": [
+        631,
+        627,
+        640,
+        624,
+        661,
+        625,
+        635,
+        691,
+        619,
+        620
+      ],
+      "rank": 9
+    },
+    {
+      "mode": "hybrid",
+      "page": 631,
+      "question": "What went wrong when many teams loaded Llama 2 in FP16 even though it was released with BF16 weights?",
+      "top_pages": [
+        631,
+        662,
+        691,
+        661,
+        796,
+        795,
+        635,
+        361,
+        360,
+        690
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 671,
+      "question": "What is a task vector, and how can it be used to remove undesirable behaviors from a model?",
+      "top_pages": [
+        671,
+        674,
+        673,
+        395,
+        267,
+        141,
+        509,
+        140,
+        256,
+        269
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 677,
+      "question": "Which technique did Kim et al. (2023) use to build SOLAR 10.7B from a 7B-parameter model with 32 layers?",
+      "top_pages": [
+        677,
+        678,
+        152,
+        675,
+        142,
+        229,
+        164,
+        668,
+        662,
+        712
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 688,
+      "question": "Why did full finetuning become impractical for most practitioners as models grew larger?",
+      "top_pages": [
+        603,
+        686,
+        639,
+        682,
+        688,
+        604,
+        594,
+        608,
+        681,
+        715
+      ],
+      "rank": 5
+    },
+    {
+      "mode": "hybrid",
+      "page": 696,
+      "question": "How does data-centric AI differ from model-centric AI in how it tries to improve performance?",
+      "top_pages": [
+        696,
+        697,
+        121,
+        694,
+        105,
+        753,
+        749,
+        179,
+        307,
+        735
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 709,
+      "question": "Besides domain, what other diversity axes does post-training data have, and what extra dimension applies to Llama 3 because of its synthetic data?",
+      "top_pages": [
+        709,
+        710,
+        740,
+        708,
+        146,
+        747,
+        361,
+        744,
+        170,
+        751
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 718,
+      "question": "Why do additional finetuning examples typically give diminishing returns as the dataset grows, according to the performance gain curve?",
+      "top_pages": [
+        718,
+        715,
+        713,
+        714,
+        716,
+        720,
+        719,
+        717,
+        686,
+        685
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 731,
+      "question": "What is procedural generation, and how can a template with a tool like Faker be used to create synthetic credit card transactions?",
+      "top_pages": [
+        731,
+        732,
+        771,
+        727,
+        737,
+        742,
+        723,
+        555,
+        726,
+        544
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 744,
+      "question": "When extending a model from an 8K-token limit toward 128K using synthetic data, what source text is used as the context for each generated question-answer pair?",
+      "top_pages": [
+        744,
+        178,
+        726,
+        728,
+        36,
+        440,
+        754,
+        428,
+        441,
+        855
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 763,
+      "question": "What improvements did Databricks report after stripping stray Markdown and HTML tokens from their training data?",
+      "top_pages": [
+        763,
+        713,
+        771,
+        697,
+        155,
+        122,
+        703,
+        760,
+        154,
+        706
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 770,
+      "question": "In the footnote comparing GPT-3 and GPT-4 contributor lists, roughly how many people were credited with data work for GPT-4 versus GPT-3?",
+      "top_pages": [
+        770,
+        757,
+        758,
+        392,
+        131,
+        609,
+        128,
+        386,
+        36,
+        663
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 780,
+      "question": "Why is the prefill step of language model inference limited by compute, while the decode step is limited by memory bandwidth?",
+      "top_pages": [
+        780,
+        781,
+        836,
+        851,
+        794,
+        777,
+        837,
+        620,
+        139,
+        623
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 807,
+      "question": "Which three key numbers help decide whether a chip can run your workload and how long it will take?",
+      "top_pages": [
+        801,
+        158,
+        807,
+        796,
+        805,
+        806,
+        156,
+        803,
+        797,
+        792
+      ],
+      "rank": 3
+    },
+    {
+      "mode": "hybrid",
+      "page": 834,
+      "question": "How does a batching method that processes a batch when it fills up or when a time window like 100 ms expires differ from one that waits for a fixed number of requests?",
+      "top_pages": [
+        834,
+        835,
+        782,
+        784,
+        849,
+        833,
+        789,
+        790,
+        787,
+        884
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 846,
+      "question": "What is the difference between model-level and inference service-level optimization in terms of effect on model behavior?",
+      "top_pages": [
+        808,
+        846,
+        809,
+        773,
+        775,
+        833,
+        774,
+        847,
+        848,
+        784
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "hybrid",
+      "page": 847,
+      "question": "Why might a team prioritizing low latency over cost choose to scale up replica parallelism?",
+      "top_pages": [
+        841,
+        844,
+        848,
+        845,
+        351,
+        842,
+        847,
+        205,
+        447,
+        782
+      ],
+      "rank": 7
+    },
+    {
+      "mode": "hybrid",
+      "page": 854,
+      "question": "What is the suggested order of components to add when expanding a basic AI application architecture, starting with context enhancement?",
+      "top_pages": [
+        854,
+        853,
+        875,
+        855,
+        926,
+        50,
+        498,
+        83,
+        852,
+        78
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid",
+      "page": 863,
+      "question": "What are the benefits of using a router to send different queries to different models instead of one model for everything?",
+      "top_pages": [
+        863,
+        866,
+        865,
+        864,
+        676,
+        497,
+        867,
+        659,
+        665,
+        667
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 51,
+      "question": "What distinguishes AI engineering from traditional ML engineering in terms of what the practitioner does with models?",
+      "top_pages": [
+        98,
+        104,
+        113,
+        97,
+        56,
+        51,
+        14,
+        33,
+        112,
+        115
+      ],
+      "rank": 6
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 69,
+      "question": "In the study of occupation-specific writing tasks with 453 professionals, by how much did average task time drop and output quality rise for those given ChatGPT?",
+      "top_pages": [
+        69,
+        9,
+        55,
+        573,
+        130,
+        216,
+        52,
+        108,
+        32,
+        71
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 100,
+      "question": "What are the three main responsibilities of the model development layer in the AI engineering stack?",
+      "top_pages": [
+        100,
+        93,
+        94,
+        107,
+        948,
+        967,
+        935,
+        113,
+        209,
+        106
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 123,
+      "question": "How did Gunasekar et al. (2023) show that a smaller model with high-quality data can beat larger models on coding benchmarks?",
+      "top_pages": [
+        123,
+        603,
+        739,
+        704,
+        388,
+        711,
+        710,
+        151,
+        162,
+        608
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 144,
+      "question": "What does the final module after the transformer blocks do, and what is it sometimes called?",
+      "top_pages": [
+        144,
+        143,
+        987,
+        937,
+        643,
+        136,
+        986,
+        146,
+        826,
+        145
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 169,
+      "question": "What two problems with pre-trained models is post-training meant to fix?",
+      "top_pages": [
+        169,
+        227,
+        103,
+        251,
+        170,
+        102,
+        120,
+        740,
+        601,
+        751
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 173,
+      "question": "What is the term for the (prompt, response) example pairs used to teach a model to respond conversationally, and what is this process informally called?",
+      "top_pages": [
+        173,
+        178,
+        421,
+        181,
+        490,
+        293,
+        420,
+        175,
+        422,
+        294
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 181,
+      "question": "Why did Meta move from RLHF to DPO between Llama 2 and Llama 3?",
+      "top_pages": [
+        181,
+        170,
+        708,
+        361,
+        146,
+        186,
+        851,
+        740,
+        426,
+        360
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 185,
+      "question": "What objective is used to train a reward model from comparison data, according to the InstructGPT formula?",
+      "top_pages": [
+        185,
+        183,
+        698,
+        223,
+        181,
+        186,
+        974,
+        954,
+        170,
+        178
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 234,
+      "question": "Why does evaluation get harder as AI models become more intelligent, as illustrated by book summaries?",
+      "top_pages": [
+        234,
+        309,
+        387,
+        239,
+        98,
+        409,
+        232,
+        20,
+        303,
+        311
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 235,
+      "question": "Why is it hard to judge open-ended foundation model outputs against ground truths, compared with classification models in traditional ML?",
+      "top_pages": [
+        235,
+        309,
+        234,
+        104,
+        108,
+        107,
+        98,
+        784,
+        253,
+        47
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 246,
+      "question": "If a language model has a bits-per-character of 3 and each character is 7 bits, what bits-per-byte value results, and what does that imply about compression?",
+      "top_pages": [
+        246,
+        245,
+        241,
+        634,
+        691,
+        962,
+        811,
+        939,
+        247,
+        809
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 322,
+      "question": "Besides accuracy, which metrics are commonly used for classification tasks, which are treated as multiple choice with identical choices for every question?",
+      "top_pages": [
+        322,
+        269,
+        321,
+        253,
+        318,
+        323,
+        189,
+        970,
+        205,
+        258
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 339,
+      "question": "How many naturally occurring prompts does the RealToxicityPrompts benchmark contain, and what is it designed to elicit from models?",
+      "top_pages": [
+        339,
+        305,
+        448,
+        478,
+        493,
+        468,
+        466,
+        418,
+        460,
+        380
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 371,
+      "question": "Why is it beneficial to choose a model that follows a standard API, and whose API do many providers imitate?",
+      "top_pages": [
+        371,
+        363,
+        369,
+        89,
+        364,
+        855,
+        372,
+        683,
+        367,
+        374
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 381,
+      "question": "Which eight benchmarks besides the Hugging Face leaderboard's are included in HELM Lite, and what criticism is raised about how coverage is chosen?",
+      "top_pages": [
+        381,
+        380,
+        379,
+        382,
+        383,
+        414,
+        491,
+        384,
+        667,
+        963
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 392,
+      "question": "How many benchmarks did OpenAI find to have at least 40% of their data in GPT-3's training set, and what do they recommend public benchmarks do to combat contamination?",
+      "top_pages": [
+        392,
+        388,
+        378,
+        122,
+        985,
+        391,
+        389,
+        770,
+        390,
+        380
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 393,
+      "question": "In the example of extracting a person's current employer from a resume PDF, what two steps make up the pipeline that should each be evaluated independently?",
+      "top_pages": [
+        393,
+        394,
+        396,
+        357,
+        950,
+        984,
+        405,
+        398,
+        616,
+        891
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 417,
+      "question": "What did the OpenAI research manager say is the real problem regarding prompt engineering as a skill?",
+      "top_pages": [
+        417,
+        411,
+        416,
+        491,
+        490,
+        55,
+        465,
+        454,
+        99,
+        432
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 456,
+      "question": "Why can prompt engineering tools unexpectedly inflate API bills?",
+      "top_pages": [
+        456,
+        457,
+        458,
+        99,
+        491,
+        416,
+        411,
+        109,
+        454,
+        839
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 465,
+      "question": "What is the term for figuring out the hidden system prompt behind an AI application, and why might bad actors want to do it?",
+      "top_pages": [
+        465,
+        490,
+        468,
+        489,
+        424,
+        21,
+        463,
+        466,
+        889,
+        469
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 472,
+      "question": "In the PAIR method for automated prompt attacks, what role does the attacker AI play and what steps does it follow against the target AI?",
+      "top_pages": [
+        472,
+        473,
+        490,
+        469,
+        468,
+        945,
+        961,
+        454,
+        483,
+        975
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 486,
+      "question": "When safety-finetuning a model, why should it be trained to handle borderline requests like asking how to get into a locked room, and what response is ideal?",
+      "top_pages": [
+        486,
+        441,
+        594,
+        597,
+        173,
+        470,
+        169,
+        698,
+        713,
+        170
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 491,
+      "question": "Why does the book say a model needs more than instructions to accomplish a task, and what topic is covered in the following chapter?",
+      "top_pages": [
+        491,
+        494,
+        490,
+        419,
+        50,
+        227,
+        121,
+        764,
+        551,
+        20
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 494,
+      "question": "What are the two dominant patterns for constructing context for a model, and how does each one gather information?",
+      "top_pages": [
+        494,
+        21,
+        855,
+        440,
+        497,
+        854,
+        581,
+        591,
+        590,
+        589
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 517,
+      "question": "How do HNSW and LSH compare in terms of index build cost versus query accuracy and speed?",
+      "top_pages": [
+        517,
+        510,
+        511,
+        956,
+        964,
+        516,
+        162,
+        518,
+        874,
+        789
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 521,
+      "question": "What is recursive chunking of documents, and how does it reduce the chance of splitting related text apart?",
+      "top_pages": [
+        521,
+        520,
+        500,
+        522,
+        523,
+        526,
+        978,
+        960,
+        527,
+        528
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 554,
+      "question": "What is the main difference between reinforcement learning agents and foundation model agents in how their planners work?",
+      "top_pages": [
+        554,
+        591,
+        552,
+        933,
+        589,
+        186,
+        45,
+        170,
+        47,
+        540
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 577,
+      "question": "In agent planning failures, what is an example of calling a valid tool with incorrect parameter values, such as with the lbs_to_kg tool?",
+      "top_pages": [
+        577,
+        579,
+        561,
+        580,
+        559,
+        578,
+        562,
+        543,
+        576,
+        573
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 583,
+      "question": "How should information be allocated among internal knowledge, long-term memory, and short-term memory based on how frequently it is needed?",
+      "top_pages": [
+        583,
+        582,
+        587,
+        586,
+        965,
+        960,
+        585,
+        588,
+        581,
+        498
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 601,
+      "question": "Why might an application developer usually end up finetuning a model that has already been post-trained rather than a raw pre-trained one?",
+      "top_pages": [
+        601,
+        103,
+        598,
+        169,
+        597,
+        713,
+        170,
+        179,
+        102,
+        599
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 619,
+      "question": "How much memory would the weights of a 13-billion-parameter model need in 32-bit format versus when each value is reduced to 2 bytes?",
+      "top_pages": [
+        619,
+        625,
+        624,
+        151,
+        627,
+        631,
+        640,
+        823,
+        661,
+        633
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 631,
+      "question": "What went wrong when many teams loaded Llama 2 in FP16 even though it was released with BF16 weights?",
+      "top_pages": [
+        631,
+        691,
+        796,
+        360,
+        662,
+        795,
+        628,
+        630,
+        146,
+        661
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 671,
+      "question": "What is a task vector, and how can it be used to remove undesirable behaviors from a model?",
+      "top_pages": [
+        671,
+        674,
+        614,
+        613,
+        673,
+        590,
+        665,
+        269,
+        765,
+        969
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 677,
+      "question": "Which technique did Kim et al. (2023) use to build SOLAR 10.7B from a 7B-parameter model with 32 layers?",
+      "top_pages": [
+        677,
+        678,
+        675,
+        753,
+        640,
+        653,
+        662,
+        152,
+        151,
+        142
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 688,
+      "question": "Why did full finetuning become impractical for most practitioners as models grew larger?",
+      "top_pages": [
+        688,
+        641,
+        713,
+        714,
+        639,
+        603,
+        682,
+        683,
+        604,
+        686
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 696,
+      "question": "How does data-centric AI differ from model-centric AI in how it tries to improve performance?",
+      "top_pages": [
+        696,
+        697,
+        121,
+        98,
+        751,
+        749,
+        714,
+        116,
+        104,
+        97
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 709,
+      "question": "Besides domain, what other diversity axes does post-training data have, and what extra dimension applies to Llama 3 because of its synthetic data?",
+      "top_pages": [
+        709,
+        708,
+        740,
+        710,
+        747,
+        744,
+        361,
+        751,
+        755,
+        170
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 718,
+      "question": "Why do additional finetuning examples typically give diminishing returns as the dataset grows, according to the performance gain curve?",
+      "top_pages": [
+        718,
+        719,
+        716,
+        717,
+        714,
+        641,
+        715,
+        713,
+        686,
+        682
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 731,
+      "question": "What is procedural generation, and how can a template with a tool like Faker be used to create synthetic credit card transactions?",
+      "top_pages": [
+        731,
+        732,
+        771,
+        727,
+        77,
+        723,
+        742,
+        722,
+        769,
+        701
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 744,
+      "question": "When extending a model from an 8K-token limit toward 128K using synthetic data, what source text is used as the context for each generated question-answer pair?",
+      "top_pages": [
+        744,
+        428,
+        600,
+        178,
+        754,
+        527,
+        46,
+        531,
+        603,
+        441
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 763,
+      "question": "What improvements did Databricks report after stripping stray Markdown and HTML tokens from their training data?",
+      "top_pages": [
+        763,
+        391,
+        710,
+        703,
+        760,
+        695,
+        153,
+        706,
+        713,
+        161
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 770,
+      "question": "In the footnote comparing GPT-3 and GPT-4 contributor lists, roughly how many people were credited with data work for GPT-4 versus GPT-3?",
+      "top_pages": [
+        770,
+        421,
+        757,
+        155,
+        36,
+        165,
+        758,
+        704,
+        128,
+        130
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 780,
+      "question": "Why is the prefill step of language model inference limited by compute, while the decode step is limited by memory bandwidth?",
+      "top_pages": [
+        780,
+        836,
+        781,
+        794,
+        851,
+        837,
+        139,
+        958,
+        777,
+        793
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 807,
+      "question": "Which three key numbers help decide whether a chip can run your workload and how long it will take?",
+      "top_pages": [
+        807,
+        157,
+        806,
+        801,
+        796,
+        158,
+        777,
+        792,
+        622,
+        795
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 834,
+      "question": "How does a batching method that processes a batch when it fills up or when a time window like 100 ms expires differ from one that waits for a fixed number of requests?",
+      "top_pages": [
+        834,
+        835,
+        782,
+        787,
+        833,
+        790,
+        784,
+        847,
+        836,
+        789
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 846,
+      "question": "What is the difference between model-level and inference service-level optimization in terms of effect on model behavior?",
+      "top_pages": [
+        808,
+        846,
+        809,
+        773,
+        847,
+        22,
+        833,
+        774,
+        775,
+        362
+      ],
+      "rank": 2
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 847,
+      "question": "Why might a team prioritizing low latency over cost choose to scale up replica parallelism?",
+      "top_pages": [
+        847,
+        842,
+        844,
+        841,
+        848,
+        351,
+        979,
+        845,
+        352,
+        790
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 854,
+      "question": "What is the suggested order of components to add when expanding a basic AI application architecture, starting with context enhancement?",
+      "top_pages": [
+        854,
+        853,
+        947,
+        926,
+        498,
+        852,
+        855,
+        99,
+        114,
+        494
+      ],
+      "rank": 1
+    },
+    {
+      "mode": "hybrid_rerank",
+      "page": 863,
+      "question": "What are the benefits of using a router to send different queries to different models instead of one model for everything?",
+      "top_pages": [
+        863,
+        865,
+        866,
+        676,
+        864,
+        660,
+        968,
+        497,
+        867,
+        666
+      ],
+      "rank": 1
+    }
+  ]
+}
