@@ -125,11 +125,12 @@ def index_book(user_id: int, book_id: int, pages: list[tuple[int, str]], toc: li
 # ---- search ----------------------------------------------------------------
 
 def search(query: str, user_id: int, book_id: int, max_page: int | None = None,
-           mode: str = "hybrid_rerank", k: int = 5) -> list[dict]:
-    """Returns up to k chunks: {page_no, heading_path, text, score}, best first."""
+           mode: str = "hybrid_rerank", k: int = 5, min_page: int | None = None) -> list[dict]:
+    """Returns up to k chunks: {page_no, heading_path, text, score}, best first.
+    max_page: only pages the reader has already seen. min_page with max_page: one chapter."""
     must = [_match("user_id", user_id), _match("book_id", book_id)]
-    if max_page is not None:  # only pages the reader has already seen
-        must.append(models.FieldCondition(key="page_no", range=models.Range(lte=max_page)))
+    if max_page is not None or min_page is not None:
+        must.append(models.FieldCondition(key="page_no", range=models.Range(gte=min_page, lte=max_page)))
     flt = models.Filter(must=must)
     (dense,), (sparse,) = embed([query])
 

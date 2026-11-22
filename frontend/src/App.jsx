@@ -358,6 +358,11 @@ function Reader({ book: initial, onClose }) {
     setChatRequest({ id })
     setTab('chat')
   }
+  // A question from the chapter guide starts a new chat about those pages.
+  const askChapter = (scope, question) => {
+    setChatRequest({ scope, question })
+    setTab('chat')
+  }
 
   // The contents list can be closed. Remembered in this browser.
   const [tocOpen, setTocOpen] = useState(() => {
@@ -527,7 +532,7 @@ function Reader({ book: initial, onClose }) {
             <PageCard key={page} book={book} page={page} version={profileVersion} onProfileChange={profileChanged} autoRead={autoRead} />
           </div>
           <div hidden={tab !== 'chapter'}>
-            <ChapterGuide book={book} page={page} toc={toc} numPages={numPages} go={go} active={tab === 'chapter'} />
+            <ChapterGuide book={book} page={page} toc={toc} numPages={numPages} go={go} active={tab === 'chapter'} onAsk={askChapter} />
           </div>
           <div hidden={tab !== 'chat'} className="chat-tab">
             <Chat book={book} page={page} go={go} onProfileChange={profileChanged} chapters={chapters} request={chatRequest} />
@@ -744,7 +749,8 @@ const PAGE_VALUES = { read: 'Read it', skim: 'Skim', skip: 'Can skip', unchecked
 
 // A whole chapter in one guide: the key ideas, the details that are easy to miss, and a line for
 // every page, so the reader can see that no page was left out.
-function ChapterGuide({ book, page, toc, numPages, go, active }) {
+function ChapterGuide({ book, page, toc, numPages, go, active, onAsk }) {
+  const [question, setQuestion] = useState('')
   const sections = sectionsAt(toc, page, numPages || 0)
   const fits = (s) => s.end - s.start + 1 <= GUIDE_MAX_PAGES
   const [pickedId, setPickedId] = useState(null)
@@ -840,6 +846,22 @@ function ChapterGuide({ book, page, toc, numPages, go, active }) {
             Made from the text of pages {section.start} to {section.end}, for a {guide.level} reader.
             Figures were not looked at. Their pages are marked.
           </p>
+          <form className="ask-chapter" onSubmit={(e) => {
+            e.preventDefault()
+            if (!question.trim()) return
+            onAsk({ start: section.start, end: section.end, title: section.title }, question.trim())
+            setQuestion('')
+          }}>
+            <h2>Ask about this chapter</h2>
+            <textarea rows="2" value={question} aria-label="Your question about this chapter"
+              placeholder="For example: Explain the second key idea again with a simple example."
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) e.currentTarget.form.requestSubmit() }} />
+            <div className="row">
+              <span className="muted small">Opens in Chat. Follow-up questions stay about pages {section.start} to {section.end}.</span>
+              <button className="primary" disabled={!question.trim()}>Ask</button>
+            </div>
+          </form>
         </>
       )}
     </div>
@@ -921,6 +943,7 @@ function Chat({ book, page, go, onProfileChange, chapters, request }) {
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [wholeBook, setWholeBook] = useState(false)
+  const [newScope, setNewScope] = useState(null) // { start, end, title } for a new chat from a chapter guide
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const endRef = useRef(null)
@@ -935,14 +958,46 @@ function Chat({ book, page, go, onProfileChange, chapters, request }) {
 
   const open = (id) => {
     setChatId(id)
+    setNewScope(null)
     setMessages([])
     setError('')
     if (id) api(`/chats/${id}/messages`).then(setMessages, (err) => setError(err.message))
   }
 
-  // A chat picked in the Notes tab.
+  // A saved chapter chat keeps its pages. A new one gets them from the chapter guide.
+  const current = chats.find((c) => c.id === chatId)
+  const scope = chatId ? (current?.start_page ? { start: current.start_page, end: current.end_page } : null) : newScope
+
+  // chat: passed in when the chat was just changed and chatId is not updated yet.
+  const ask = (question, scope, chat = chatId) => {
+    setBusy(true)
+    setError('')
+    const where = !chat && scope ? { start: scope.start, end: scope.end } : {}
+    api(`/books/${book.id}/ask`, { method: 'POST', json: { text: question, page, whole_book: wholeBook, chat_id: chat, ...where } })
+      .then((res) => {
+        setMessages((m) => [...m, ...res.messages])
+        setText('')
+        setNote(res.profile_note || '')
+        if (res.profile_note) onProfileChange()
+        if (!chat) {
+          setChatId(res.chat_id)
+          setChats((c) => [{ id: res.chat_id, title: question.slice(0, 60), page_no: scope?.start ?? page,
+            start_page: scope?.start, end_page: scope?.end }, ...c])
+        }
+      }, (err) => setError(err.message))
+      .finally(() => setBusy(false))
+  }
+
+  // A chat picked in the Notes tab, or a question from the chapter guide.
   useEffect(() => {
     if (!request) return
+    if (request.scope) {
+      open(null)
+      setNewScope(request.scope)
+      setText(request.question) // shown in the box while the answer is made
+      ask(request.question, request.scope, null)
+      return
+    }
     api(`/books/${book.id}/chats`).then(setChats, () => {})
     open(request.id)
   }, [request])
@@ -956,20 +1011,7 @@ function Chat({ book, page, go, onProfileChange, chapters, request }) {
     e.preventDefault()
     const question = text.trim()
     if (!question || busy) return
-    setBusy(true)
-    setError('')
-    api(`/books/${book.id}/ask`, { method: 'POST', json: { text: question, page, whole_book: wholeBook, chat_id: chatId } })
-      .then((res) => {
-        setMessages((m) => [...m, ...res.messages])
-        setText('')
-        setNote(res.profile_note || '')
-        if (res.profile_note) onProfileChange()
-        if (!chatId) {
-          setChatId(res.chat_id)
-          setChats((c) => [{ id: res.chat_id, title: question.slice(0, 60), page_no: page }, ...c])
-        }
-      }, (err) => setError(err.message))
-      .finally(() => setBusy(false))
+    ask(question, scope)
   }
 
   if (book.status !== 'ready') return <p className="muted">Reading the book for the first time…</p>
@@ -988,8 +1030,9 @@ function Chat({ book, page, go, onProfileChange, chapters, request }) {
           </optgroup>
         ))}
       </select>
+      {scope && <p className="muted small scope">This chat is about pages {scope.start} to {scope.end}{scope.title && `, ${scope.title}`}.</p>}
       <div className="messages">
-        {messages.length === 0 && !busy && (
+        {messages.length === 0 && !busy && !scope && (
           <p className="muted">Ask anything about this page or the book. For example: “What does this page mean?” or “I forgot what a token is.”</p>
         )}
         {messages.map((m) => (
@@ -1008,14 +1051,17 @@ function Chat({ book, page, go, onProfileChange, chapters, request }) {
         <div ref={endRef} />
       </div>
       <form onSubmit={send}>
-        <textarea rows="2" value={text} placeholder={`Ask about page ${page}…`} aria-label="Your question"
+        <textarea rows="2" value={text} aria-label="Your question"
+          placeholder={scope ? `Ask about pages ${scope.start} to ${scope.end}…` : `Ask about page ${page}…`}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) send(e) }} />
         <div className="row">
-          <label className="muted">
-            <input type="checkbox" checked={wholeBook} onChange={(e) => setWholeBook(e.target.checked)} />
-            {' '}Search the whole book, not only pages 1–{page}
-          </label>
+          {scope ? <span /> : (
+            <label className="muted">
+              <input type="checkbox" checked={wholeBook} onChange={(e) => setWholeBook(e.target.checked)} />
+              {' '}Search the whole book, not only pages 1–{page}
+            </label>
+          )}
           <button className="primary" disabled={busy || !text.trim()}>Ask</button>
         </div>
       </form>

@@ -225,6 +225,10 @@ progress::-moz-progress-bar { background: var(--accent-ink); }
 .pagemap .skip { color: var(--pencil); }
 .pagemap .unchecked strong { color: var(--error); }
 .pagemap + p { margin-top: 1.2rem; }
+.ask-chapter { margin-top: 1.5rem; padding-top: 0.2rem; border-top: 1px solid var(--line); }
+.ask-chapter textarea { width: 100%; resize: vertical; font-size: 1rem; }
+.ask-chapter .row { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 0.5rem; }
+.chat-tab .scope { margin: 0; }
 
 /* ---- highlights on the page ---- */
 .hl { position: absolute; pointer-events: none; border-radius: 2px; mix-blend-mode: multiply; }

@@ -604,8 +604,9 @@ CARDS_SQL = ("SELECT DISTINCT ON (page_no) page_no, card_json->'bullets' AS bull
 
 def chat_list(book_id: int, user_id: int) -> list[dict]:
     """page_no: the page the chat started on. It decides the chapter the chat is shown under."""
-    return q("SELECT c.id, c.title, c.created_at, "
-             "(SELECT m.page_no FROM messages m WHERE m.chat_id = c.id ORDER BY m.id LIMIT 1) AS page_no "
+    return q("SELECT c.id, c.title, c.created_at, c.start_page, c.end_page, "
+             "coalesce(c.start_page, (SELECT m.page_no FROM messages m WHERE m.chat_id = c.id ORDER BY m.id LIMIT 1)) "
+             "AS page_no "
              "FROM chats c WHERE c.book_id = %s AND c.user_id = %s ORDER BY c.created_at DESC", (book_id, user_id))
 
 
@@ -622,16 +623,23 @@ def book_notes(book_id: int, user: dict = Depends(current_user)):
     }
 
 
-def reader_notes(book: dict, user_id: int, page_no: int, pages: list[int], chat_id: int | None) -> dict:
+def reader_notes(book: dict, user_id: int, page_no: int, pages: list[int], chat_id: int | None,
+                 scope: tuple[int, int] | None = None) -> dict:
     """What the reader already saved around a question, for the chat. `pages` are the pages the book
-    search found. Everything here is looked up by page number: no second search, no LLM call."""
+    search found. Everything here is looked up by page number: no second search, no LLM call.
+    scope: the pages of a chat started from a chapter guide. Then that whole guide is given."""
     bid = book["id"]
     chapter = next(c for c in reversed(chapters(toc(book["file_path"]), book["page_count"])) if c["start"] <= page_no)
-    guide = q("SELECT guide_json->>'summary' AS summary FROM chapter_guides WHERE book_id = %s AND start_page <= %s "
-              "AND end_page >= %s ORDER BY end_page - start_page DESC LIMIT 1", (bid, page_no, page_no))
+    if scope:
+        guide = q("SELECT guide_json FROM chapter_guides WHERE book_id = %s AND start_page = %s AND end_page = %s",
+                  (bid, *scope))
+    else:
+        guide = q("SELECT jsonb_build_object('summary', guide_json->'summary') AS guide_json FROM chapter_guides "
+                  "WHERE book_id = %s AND start_page <= %s AND end_page >= %s ORDER BY end_page - start_page DESC "
+                  "LIMIT 1", (bid, page_no, page_no))
     return {
         "chapter": chapter["title"],
-        "chapter_summary": guide[0]["summary"] if guide else None,
+        "guide": guide[0]["guide_json"] if guide else None,
         "cards": q(CARDS_SQL.format(more="AND page_no = ANY(%s)"), (bid, pages)),
         "highlights": q("SELECT page_no, text FROM highlights WHERE book_id = %s AND page_no = ANY(%s) "
                         "ORDER BY page_no, id LIMIT 12", (bid, pages)),
@@ -802,6 +810,9 @@ class Ask(BaseModel):
     page: int
     whole_book: bool = False     # False: search only pages up to the current one
     chat_id: int | None = None   # None: start a new chat
+    # A new chat from a chapter guide: search only these pages. Saved on the chat for later questions.
+    start: int | None = None
+    end: int | None = None
 
 
 @app.get("/api/books/{book_id}/chats")
@@ -823,20 +834,32 @@ def ask(book_id: int, body: Ask, user: dict = Depends(current_user)):
         raise HTTPException(409, "Search is still being prepared for this book. Try again in a minute.")
     question = body.text.strip()
     history = []
+    scope = None
     if body.chat_id is not None:
-        if not q("SELECT 1 FROM chats WHERE id = %s AND user_id = %s AND book_id = %s",
-                 (body.chat_id, user["id"], book_id)):
+        rows = q("SELECT start_page, end_page FROM chats WHERE id = %s AND user_id = %s AND book_id = %s",
+                 (body.chat_id, user["id"], book_id))
+        if not rows:
             raise HTTPException(404, "Chat not found")
+        if rows[0]["start_page"]:
+            scope = (rows[0]["start_page"], rows[0]["end_page"])
         history = q("SELECT role, text FROM messages WHERE chat_id = %s ORDER BY id DESC LIMIT %s",
                     (body.chat_id, HISTORY_MESSAGES))[::-1]
+    elif body.start is not None and body.end is not None:
+        if not 1 <= body.start <= body.end <= (book["page_count"] or 0):
+            raise HTTPException(422, "These pages are not in the book")
+        scope = (body.start, body.end)
 
     # Free work first: search and rerank run locally.
     text = page_text(book_id, body.page)
-    hits = search.search(question, user["id"], book_id, max_page=None if body.whole_book else body.page)
+    if scope:  # a chapter chat: the whole chapter, even the pages after the current one
+        hits = search.search(question, user["id"], book_id, min_page=scope[0], max_page=scope[1])
+    else:
+        hits = search.search(question, user["id"], book_id, max_page=None if body.whole_book else body.page)
     _, level = level_of_page(user["id"], book_id, body.page)
     skills = known_skills(user["id"])
     # The search found the pages. What the reader saved on those pages is read straight from the database.
-    notes = reader_notes(book, user["id"], body.page, sorted({h["page_no"] for h in hits} | {body.page}), body.chat_id)
+    notes = reader_notes(book, user["id"], body.page, sorted({h["page_no"] for h in hits} | {body.page}), body.chat_id,
+                         scope)
     with llm_lock:
         try:
             result, usage = llm.answer(question, body.page, text, hits, history, level, skills,
@@ -859,8 +882,8 @@ def ask(book_id: int, body: Ask, user: dict = Depends(current_user)):
     sources = sorted({p for p in result.source_pages if p in given})
     with pool.connection() as conn, conn.transaction():
         chat_id = body.chat_id or conn.execute(
-            "INSERT INTO chats (user_id, book_id, title) VALUES (%s, %s, %s) RETURNING id",
-            (user["id"], book_id, question[:60])).fetchone()["id"]
+            "INSERT INTO chats (user_id, book_id, title, start_page, end_page) VALUES (%s, %s, %s, %s, %s) RETURNING id",
+            (user["id"], book_id, question[:60], *(scope or (None, None)))).fetchone()["id"]
         insert = (f"INSERT INTO messages (chat_id, role, text, page_no, source_pages) "
                   f"VALUES (%s, %s, %s, %s, %s) RETURNING {MESSAGE_COLS}")
         asked = conn.execute(insert, (chat_id, "user", question, body.page, [])).fetchone()

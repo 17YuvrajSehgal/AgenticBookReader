@@ -177,6 +177,10 @@ CREATE TABLE IF NOT EXISTS highlights (
 );
 CREATE INDEX IF NOT EXISTS highlights_book ON highlights (book_id, page_no);
 
+-- A chat started from a chapter guide stays about those pages. NULL: a normal chat.
+ALTER TABLE chats ADD COLUMN IF NOT EXISTS start_page INT;
+ALTER TABLE chats ADD COLUMN IF NOT EXISTS end_page INT;
+
 CREATE TABLE IF NOT EXISTS usage_log (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

@@ -185,7 +185,7 @@ ANSWER_SYSTEM = """You answer a reader's question about a book they are reading.
 - {level}
 
 
-<reader_notes>, when given, is what this reader already saw or wrote in this chapter: the summary of the chapter, the page summaries the tool gave them, the lines they highlighted as important, and their earlier questions with the answers. Use it to connect your answer to what they already know, and use the same words for the same things. It is not a source: every fact must still come from the book parts. Do not repeat an earlier answer in full. Build on it.
+<reader_notes>, when given, is what this reader already saw or wrote in this chapter: the summary of the chapter, the chapter guide they read, the page summaries the tool gave them, the lines they highlighted as important, and their earlier questions with the answers. Use it to connect your answer to what they already know, and use the same words for the same things. It is not a source: every fact must still come from the book parts. Do not repeat an earlier answer in full. Build on it.
 
 Output:
 - answer: start with the direct answer. At most 150 words, unless the reader asks for more detail. Plain text only, no markdown headings or tables. If the book parts do not hold the answer, say that in one sentence.
@@ -204,8 +204,13 @@ def answer(question: str, page_no: int, page_text: str, hits: list[dict], histor
         parts.append(f"<book_part page=\"{h['page_no']}\" section=\"{h['heading_path']}\">\n{h['text']}\n</book_part>")
     if notes:
         lines = [f"Chapter: {notes['chapter']}"]
-        if notes["chapter_summary"]:
-            lines.append(f"Summary of the chapter: {notes['chapter_summary']}")
+        guide = notes["guide"] or {}
+        if guide.get("summary"):
+            lines.append(f"Summary of the chapter: {guide['summary']}")
+        # A chat started from the chapter guide: the reader just read this guide and asks about it.
+        lines += [f"Key idea from the chapter guide (pages {i['pages']}): {i['title']}. {i['explanation']}"
+                  for i in guide.get("ideas", [])]
+        lines += [f"Detail from the chapter guide (page {d['page']}): {d['text']}" for d in guide.get("details", [])]
         lines += [f"Summary of page {c['page_no']}: {' '.join(c['bullets'])}" for c in notes["cards"]]
         lines += [f"Highlighted by the reader on page {h['page_no']}: \"{h['text'][:400]}\"" for h in notes["highlights"]]
         lines += [f"Earlier question: {e['question'][:300]}\nEarlier answer: {e['answer'][:500]}" for e in notes["earlier"]]
