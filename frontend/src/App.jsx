@@ -793,7 +793,8 @@ function Reader({ book: initial, onClose }) {
         <section className={`pdf ${look}`} ref={paneRef}
           onMouseUp={({ clientX, clientY }) => setTimeout(() => onSelect(clientX, clientY))}
           onScroll={() => { setSelection(null); setPicked(null) }}>
-          <Document file={`/api/books/${book.id}/file`} onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
+          {/* v: a new address when the app changed the file, so the browser never shows an old saved copy. */}
+          <Document file={`/api/books/${book.id}/file?v=${book.file_version ?? 0}`} onLoadSuccess={(pdf) => setNumPages(pdf.numPages)}
             loading={<p className="muted">Opening the book…</p>} error={<p className="error">Could not open this PDF.</p>}>
             {width > 0 && (
               <Page pageNumber={page} width={Math.min(width - 32, 1000)}>
@@ -1102,6 +1103,10 @@ function WholePdf({ book, active, onBookChange, onProgress }) {
           ? <button onClick={stop} disabled={job.stop}>{job.stop ? 'Stopping after this page…' : 'Stop'}</button>
           : <button className="primary" onClick={start} disabled={range.start > range.end}>Summarize every page</button>}
         <a href={`/api/books/${book.id}/summary.md`} download>Save all summaries as .md</a>
+        <a href={`/api/books/${book.id}/download`} download
+          title="Your highlights are written into the PDF, so Edge, Acrobat and other tools show them too">
+          Download the PDF with my highlights
+        </a>
       </div>
       {job?.start && (
         <div className="progress" role="status">

@@ -219,3 +219,8 @@ CREATE TABLE IF NOT EXISTS usage_log (
     ms          INT NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Highlights saved inside a PDF by another tool are moved into the highlights table once. See import_pdf_highlights.
+ALTER TABLE books ADD COLUMN IF NOT EXISTS pdf_highlights_taken BOOLEAN NOT NULL DEFAULT false;
+-- Goes up when the app changes a book's file, so browsers fetch the new one instead of a saved copy.
+ALTER TABLE books ADD COLUMN IF NOT EXISTS file_version INT NOT NULL DEFAULT 0;

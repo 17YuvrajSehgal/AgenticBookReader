@@ -155,6 +155,12 @@ progress::-moz-progress-bar { background: var(--accent-ink); }
    (blue stays blue), but photos still look a little unnatural. */
 .pdf.night .react-pdf__Page canvas { filter: invert(0.9) hue-rotate(180deg); }
 .reader header select.look { padding: 0.3rem 0.5rem; font-size: 0.9rem; }
+/* A highlight saved inside the PDF (for example by Edge) is already painted on the page by pdf.js.
+   pdf.js also adds its words as a <mark> for screen readers; react-pdf's stylesheet does not hide it,
+   so it showed as a yellow box of plain text on top of the page. Hidden here, still read aloud. */
+.annotationLayer .overlaidText {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
 .pdf .textLayer ::selection, .pdf .textLayer :is(span, br)::selection { background: rgb(37 99 235 / 0.3); }
 
 /* The table of contents, on the left of the page. */

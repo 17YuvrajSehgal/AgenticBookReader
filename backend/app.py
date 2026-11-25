@@ -7,6 +7,7 @@ import hashlib
 import os
 import re
 import secrets
+import sys
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -25,7 +26,7 @@ import search
 import storage
 from accounts import current_user, llm_session
 from db import pool, q
-from parsing import chapters, figure_pages, page_image, parse_pdf, toc
+from parsing import chapters, figure_pages, page_image, parse_pdf, take_highlights, toc, with_highlights
 
 HERE = Path(__file__).parent
 # The built frontend (npm run build). When it exists, this server shows the app too: one address,
@@ -42,6 +43,9 @@ async def lifespan(app: FastAPI):
     pool.open(wait=True, timeout=15)
     q((HERE / "schema.sql").read_text())
     accounts.setup()
+    # Books added before highlights were imported from PDFs: do it once now.
+    for b in q("SELECT id, file_path FROM books WHERE NOT pdf_highlights_taken AND file_path <> ''"):
+        import_pdf_highlights(b["id"], b["file_path"])
     # A crash during parsing leaves books in 'parsing'. Start those again.
     for b in q("SELECT id, file_path FROM books WHERE status = 'parsing' AND file_path <> ''"):
         threading.Thread(target=ingest, args=(b["id"], b["file_path"]), daemon=True).start()
@@ -81,7 +85,7 @@ def export_data(response: Response, user: dict = Depends(current_user)):
 
 # ---- books -----------------------------------------------------------------
 
-BOOK_COLS = "id, title, kind, status, index_status, error, page_count, last_page, created_at"
+BOOK_COLS = "id, title, kind, status, index_status, error, page_count, last_page, file_version, created_at"
 
 
 def get_book(book_id: int, user: dict) -> dict:
@@ -92,6 +96,25 @@ def get_book(book_id: int, user: dict) -> dict:
     if book["file_path"]:
         book["file_path"] = storage.local(book["file_path"])  # the storage key becomes a real file path
     return book
+
+
+def import_pdf_highlights(book_id: int, key: str) -> None:
+    """Highlights another tool saved in the PDF become app highlights, so the reader can remove them here.
+    They are taken out of the app's copy of the file, never out of the reader's own file."""
+    try:
+        path = storage.local(key)
+        found = take_highlights(path)
+        with pool.connection() as conn, conn.transaction():
+            with conn.cursor() as cur:
+                cur.executemany("INSERT INTO highlights (book_id, page_no, color, text, rects) VALUES (%s, %s, %s, %s, %s)",
+                                [(book_id, h["page"], h["color"], h["text"], Jsonb(h["rects"])) for h in found])
+            conn.execute("UPDATE books SET pdf_highlights_taken = true WHERE id = %s", (book_id,))
+            if found:
+                conn.execute("UPDATE books SET file_version = file_version + 1 WHERE id = %s", (book_id,))
+                storage.put(key, Path(path + ".new"))  # inside the transaction: if this fails, nothing is saved
+    except Exception as e:  # noqa: BLE001  a book with odd annotations must still open
+        # Not marked as done: nothing was saved, so it is tried again at the next start.
+        print(f"Could not import the PDF highlights of book {book_id}: {e}", file=sys.stderr)
 
 
 def ingest(book_id: int, key: str) -> None:
@@ -163,6 +186,7 @@ def upload_book(file: UploadFile, background: BackgroundTasks, user: dict = Depe
             q("DELETE FROM books WHERE id = %s", (book_id,))  # no book row without its file
             raise
         q("UPDATE books SET file_path = %s WHERE id = %s", (key, book_id))
+        import_pdf_highlights(book_id, key)  # before the reader opens it, so the file is already the final one
         background.add_task(ingest, book_id, key)
         return q(f"SELECT {BOOK_COLS} FROM books WHERE id = %s", (book_id,))[0]
     finally:
@@ -177,7 +201,20 @@ def book_info(book_id: int, user: dict = Depends(current_user)):
 
 @app.get("/api/books/{book_id}/file")
 def book_file(book_id: int, user: dict = Depends(current_user)):
-    return FileResponse(get_book(book_id, user)["file_path"], media_type="application/pdf")
+    # no-cache: the browser checks for a newer file each time (a cheap 304 when nothing changed).
+    # The app also puts file_version in the address, so a changed file is always fetched again.
+    return FileResponse(get_book(book_id, user)["file_path"], media_type="application/pdf",
+                        headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/api/books/{book_id}/download")
+def book_with_highlights(book_id: int, user: dict = Depends(current_user)):
+    """The PDF with the reader's highlights written in, so Edge, Acrobat and others show them too."""
+    book = get_book(book_id, user)
+    marks = q("SELECT page_no, color, text, rects FROM highlights WHERE book_id = %s ORDER BY page_no, id", (book_id,))
+    name = re.sub(r"[^A-Za-z0-9]+", "-", book["title"]).strip("-")[:80] or "book"
+    return Response(with_highlights(book["file_path"], marks), media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{name}-highlighted.pdf"'})
 
 
 @app.delete("/api/books/{book_id}")
