@@ -8,5 +8,6 @@ pymupdf>=1.26
 torch>=2.11
 FlagEmbedding>=1.4.2
 qdrant-client>=1.20,<1.21
-anthropic>=2.10    # only used with LLM_PROVIDER=api
+anthropic>=2.10    # readers' own API keys
+cryptography>=44   # encrypts the readers' API keys
 boto3>=1.44        # only used with S3_BUCKET

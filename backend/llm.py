@@ -1,15 +1,20 @@
 """The only place that knows which LLM is behind the app.
 
-LLM_PROVIDER=claude_code (default): Claude Code headless, on a personal subscription. Personal use only.
-LLM_PROVIDER=api: the Claude API, for a product with other users. Needs ANTHROPIC_API_KEY.
+In the app, every call runs inside `using(connection)`, set per reader by accounts.llm_session:
+- {"provider": "api", "api_key": ...}: the Claude API with the reader's own key.
+- {"provider": "claude_code"}: Claude Code headless with this machine's login. Owner only.
+Outside the app (python llm.py, the eval scripts) LLM_PROVIDER decides, with ANTHROPIC_API_KEY for "api".
 """
 import base64
+import hashlib
 import json
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Literal
 
 from pydantic import BaseModel, Field, ValidationError
@@ -27,7 +32,19 @@ API_MODELS = {"opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5", "haiku":
 API_FALLBACK_MODELS = {"claude-opus-5-5", "claude-sonnet-5-5"}
 # Thinking is always on for these models. Page cards and short answers do not need much of it.
 API_EFFORT = os.environ.get("LLM_EFFORT", "low")
-_api = {}
+_api = {}  # one client per API key, keyed by a hash of the key
+CLAUDE_ENV = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+_conn: ContextVar[dict | None] = ContextVar("llm_connection", default=None)
+
+
+@contextmanager
+def using(conn: dict):
+    """LLM calls in this block use this connection. A ContextVar, so threads and requests never mix them up."""
+    token = _conn.set(conn)
+    try:
+        yield
+    finally:
+        _conn.reset(token)
 
 
 class LLMError(Exception):
@@ -41,23 +58,29 @@ def _call(system: str, prompt: str, shape: type[BaseModel], model: str, image: b
     if image:
         content.insert(0, {"type": "image", "source": {
             "type": "base64", "media_type": "image/png", "data": base64.b64encode(image).decode()}})
-    call = _call_api if PROVIDER == "api" else _call_claude_code
-    return call(system, content, shape, model, timeout)
+    conn = _conn.get() or {"provider": PROVIDER, "api_key": None}
+    if conn["provider"] == "api":
+        return _call_api(system, content, shape, model, timeout, conn.get("api_key"))
+    return _call_claude_code(system, content, shape, model, timeout)
 
 
-def _call_api(system: str, content: list, shape: type[BaseModel], model: str, timeout: int):
+def _call_api(system: str, content: list, shape: type[BaseModel], model: str, timeout: int,
+              api_key: str | None = None):
     import anthropic  # only needed for this provider
 
-    if "client" not in _api:
+    slot = hashlib.sha256((api_key or "").encode()).hexdigest()
+    if slot not in _api:
         # The SDK retries connection errors, 429 and 5xx by itself, with a wait between tries.
-        _api["client"] = anthropic.Anthropic(timeout=TIMEOUT_S, max_retries=ATTEMPTS - 1)
+        # api_key None: the SDK reads ANTHROPIC_API_KEY.
+        _api[slot] = anthropic.Anthropic(api_key=api_key, timeout=TIMEOUT_S, max_retries=ATTEMPTS - 1)
+    client = _api[slot]
     model_id = API_MODELS.get(model, model)
     extra = {}
     if model_id in API_FALLBACK_MODELS:
         extra = {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
     started = time.time()
     try:
-        resp = _api["client"].with_options(timeout=timeout).beta.messages.create(
+        resp = client.with_options(timeout=timeout).beta.messages.create(
             model=model_id, max_tokens=16000, system=system,
             messages=[{"role": "user", "content": content}],
             output_config={"effort": API_EFFORT,
@@ -102,8 +125,9 @@ def _call_claude_code(system: str, content: list, shape: type[BaseModel], model:
             time.sleep(2 ** attempt)
         try:
             # ponytail: any failure (timeout, bad exit, bad JSON) gets the same retries.
+            # Without ANTHROPIC_API_KEY, so Claude Code uses this machine's own login, not a key in the env.
             proc = subprocess.run(cmd, input=stdin, capture_output=True, encoding="utf-8",
-                                  timeout=timeout, cwd=tempfile.gettempdir())
+                                  timeout=timeout, cwd=tempfile.gettempdir(), env=CLAUDE_ENV)
             lines = [json.loads(line) for line in proc.stdout.splitlines() if line.strip()]
             out = next((x for x in lines if x.get("type") == "result"), None)
             if not out or out.get("is_error") or not isinstance(out.get("structured_output"), dict):

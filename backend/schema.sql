@@ -184,6 +184,31 @@ ALTER TABLE chats ADD COLUMN IF NOT EXISTS end_page INT;
 -- book | paper. A paper gets fuller page summaries: every claim and number, and what to question.
 ALTER TABLE books ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'book';
 
+-- Accounts ----------------------------------------------------------------
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;          -- scrypt; NULL: signs in by link or Google
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';  -- owner | admin | user
+ALTER TABLE users ADD COLUMN IF NOT EXISTS disabled BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS google_sub TEXT UNIQUE;
+-- Accounts from before passwords signed in with an email link, which already proved the email.
+UPDATE users SET email_verified = true
+WHERE NOT email_verified AND password_hash IS NULL AND google_sub IS NULL;
+
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS user_agent TEXT NOT NULL DEFAULT '';
+ALTER TABLE login_tokens ADD COLUMN IF NOT EXISTS purpose TEXT NOT NULL DEFAULT 'login';  -- login | verify | reset
+
+-- How each reader reaches Claude. No row: the owner uses Claude Code on this machine, others must connect.
+CREATE TABLE IF NOT EXISTS llm_connections (
+    user_id     BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    provider    TEXT NOT NULL,     -- api | claude_code
+    api_key_enc TEXT,              -- the reader's Anthropic API key, encrypted with APP_SECRET
+    key_hint    TEXT,              -- the last 4 characters, to show which key is saved
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS usage_log (
     id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,

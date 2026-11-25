@@ -1,13 +1,15 @@
-# The backend runs on the host, not here: it needs the `claude` CLI login and (later) the GPU.
+# Development: `docker compose up -d` starts only the databases; the backend runs on your machine.
+# A server: `docker compose --profile app up -d --build` also starts the app (see README, "Run on a server").
+# Add `--profile https` on a server with a domain name: Caddy gets a free HTTPS certificate.
 services:
   postgres:
     image: postgres:17.2
     environment:
       POSTGRES_USER: reader
-      POSTGRES_PASSWORD: reader
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-reader}
       POSTGRES_DB: reader
     ports:
-      - "127.0.0.1:5433:5432"   # 5433 so it does not clash with a local Postgres
+      - "127.0.0.1:5433:5432"   # 5433 so it does not clash with a local Postgres. Never open to the internet.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -22,6 +24,41 @@ services:
     volumes:
       - qdrantdata:/qdrant/storage
 
+  app:
+    profiles: ["app"]
+    build: .
+    env_file:
+      - path: .env
+        required: false   # so `docker compose up` for development works without one
+    environment:
+      DATABASE_URL: postgresql://reader:${POSTGRES_PASSWORD:-reader}@postgres:5432/reader
+      QDRANT_URL: http://qdrant:6333
+    ports:
+      - "${APP_PORT:-127.0.0.1:8000}:8000"
+    volumes:
+      - appdata:/data          # books, the secret key file, the downloaded search models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    restart: unless-stopped
+
+  https:
+    profiles: ["https"]
+    image: caddy:2.10
+    # Not ${DOMAIN:?...}: compose reads every service, also when this profile is off.
+    command: caddy reverse-proxy --from ${DOMAIN:-localhost} --to app:8000
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddydata:/data
+    depends_on: [app]
+    restart: unless-stopped
+
 volumes:
   pgdata:
   qdrantdata:
+  appdata:
+  caddydata:

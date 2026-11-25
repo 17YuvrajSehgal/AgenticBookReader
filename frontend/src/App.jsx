@@ -44,61 +44,349 @@ function ThemeToggle() {
   )
 }
 
-export default function App() {
-  const [user, setUser] = useState(undefined) // undefined = still checking, null = logged out
-  const [book, setBook] = useState(null)
-
-  useEffect(() => {
-    api('/me').then(setUser, () => setUser(null))
-  }, [])
-
-  if (user === undefined) return null
-  if (!user) return <Login onLogin={setUser} />
-  if (book) return <Reader book={book} onClose={() => setBook(null)} />
-  // After "delete my account" the logout call gets a 401. The reader is logged out either way.
-  const logout = () => api('/logout', { method: 'POST' }).catch(() => {}).then(() => setUser(null))
-  return <Library user={user} onOpen={setBook} onLogout={logout} />
+// Read once at start: links from emails and Google come back to the app with these.
+const START = new URLSearchParams(window.location.search)
+if (START.toString()) window.history.replaceState(null, '', window.location.pathname)
+const LINK_ERRORS = {
+  link: 'This link is not valid any more. Ask for a new one.',
+  google: 'Signing in with Google did not work. Try again.',
+  closed: 'New accounts are closed on this server. Ask the admin.',
+  disabled: 'This account is turned off. Ask the admin.',
 }
 
-function Login({ onLogin }) {
+export default function App() {
+  const [user, setUser] = useState(undefined) // undefined = still checking, null = signed out
+  const [book, setBook] = useState(null)
+  const [view, setView] = useState('library') // library | settings
+  const [resetToken, setResetToken] = useState(START.get('reset') && START.get('token'))
+
+  const loadMe = () => api('/me').then(setUser, () => setUser(null))
+  useEffect(() => { loadMe() }, [])
+
+  if (resetToken) return <ResetPassword token={resetToken} onDone={(u) => { setResetToken(null); setUser(u); loadMe() }} />
+  if (user === undefined) return null
+  if (!user) return <Login onLogin={loadMe} startError={LINK_ERRORS[START.get('error')]} />
+  // After "delete my account" the logout call gets a 401. The reader is signed out either way.
+  const logout = () => api('/logout', { method: 'POST' }).catch(() => {}).then(() => { setUser(null); setView('library') })
+  if (view === 'settings') {
+    return <Settings user={user} onUser={loadMe} onBack={() => { setView('library'); loadMe() }} onLogout={logout} />
+  }
+  if (book) return <Reader book={book} onClose={() => setBook(null)} />
+  return <Library user={user} onOpen={setBook} onLogout={logout} onSettings={() => setView('settings')} />
+}
+
+// Sign in with a password, an email link or Google; or make an account.
+function Login({ onLogin, startError }) {
+  const [mode, setMode] = useState('signin') // signin | register | link | forgot
   const [email, setEmail] = useState('')
-  const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
+  const [password, setPassword] = useState('')
+  const [name, setName] = useState('')
+  const [error, setError] = useState(startError || '')
+  const [sent, setSent] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [options, setOptions] = useState({})
+  useEffect(() => { api('/auth/options').then(setOptions, () => {}) }, [])
+
+  const go = (next) => { setMode(next); setError('') }
   const submit = (e) => {
     e.preventDefault()
     setError('')
-    // With real login on, the server sends a link by email. On a local setup it logs in at once.
-    api('/login', { method: 'POST', json: { email } }).then(
-      (res) => (res.sent ? setSent(true) : onLogin(res)),
-      (err) => setError(err.message),
-    )
+    setBusy(true)
+    const [path, json, done] = {
+      signin: ['/login/password', { email, password }, null],
+      register: ['/register', { email, password, name }, 'We sent a link to confirm your email. Open it in this browser to finish.'],
+      link: ['/login/link', { email }, 'We sent a sign-in link. Open it in this browser. It works once, for 15 minutes.'],
+      forgot: ['/password/forgot', { email }, 'If this email has an account, we sent a link to choose a new password.'],
+    }[mode]
+    api(path, { method: 'POST', json })
+      .then((res) => (res.sent
+        ? setSent(options.mail ? done : 'No email was sent: this server has no mail server set up yet. '
+          + 'The link is printed in the window where the backend runs. Copy it into this browser.')
+        : onLogin()),
+        (err) => setError(err.message))
+      .finally(() => setBusy(false))
   }
+
   if (sent) {
     return (
       <div className="center">
-        <h1>Check your email</h1>
-        <p className="lede">We sent a login link to {email}. Open it in this browser. It works once, for 15 minutes.</p>
-        <button className="link" onClick={() => setSent(false)}>Use another email</button>
+        <h1>{options.mail ? 'Check your email' : 'Get the link from the server'}</h1>
+        <p className="lede">{sent}</p>
+        <button className="link" onClick={() => { setSent(''); go('signin') }}>Back to sign in</button>
       </div>
     )
   }
+  const titles = { signin: 'Sign in', register: 'Create an account', link: 'Sign in with an email link', forgot: 'Reset your password' }
+  const buttons = { signin: 'Sign in', register: 'Create account', link: 'Email me a link', forgot: 'Email me a reset link' }
   return (
-    <form className="center" onSubmit={submit}>
+    <form className="center auth" onSubmit={submit}>
       <h1>Reading Companion</h1>
       <p className="lede">Open a book. Get each page explained in simple words, and ask when you forget something.</p>
-      <label htmlFor="email">Your email</label>
-      <input id="email" type="email" required autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
-      <button className="primary">Start reading</button>
-      {error && <p className="error">{error}</p>}
+      <h2>{titles[mode]}</h2>
+      {mode === 'register' && (
+        <>
+          <label htmlFor="name">Your name <span className="muted">(optional)</span></label>
+          <input id="name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} />
+        </>
+      )}
+      <label htmlFor="email">Email</label>
+      <input id="email" type="email" required autoFocus autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+      {(mode === 'signin' || mode === 'register') && (
+        <>
+          <label htmlFor="password">Password {mode === 'register' && <span className="muted">(at least 8 characters)</span>}</label>
+          <input id="password" type="password" required minLength={mode === 'register' ? 8 : undefined}
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
+            value={password} onChange={(e) => setPassword(e.target.value)} />
+        </>
+      )}
+      <button className="primary" disabled={busy}>{busy ? 'Please wait…' : buttons[mode]}</button>
+      {error && <p className="error" role="alert">{error}</p>}
+      {options.google && mode !== 'forgot' && (
+        <a className="button google" href="/api/auth/google">Continue with Google</a>
+      )}
+      <div className="auth-links small">
+        {mode !== 'signin' && <button type="button" className="link" onClick={() => go('signin')}>Sign in with a password</button>}
+        {mode !== 'link' && <button type="button" className="link" onClick={() => go('link')}>Email me a sign-in link</button>}
+        {mode === 'signin' && <button type="button" className="link" onClick={() => go('forgot')}>Forgot your password?</button>}
+        {mode !== 'register' && options.registration !== false && (
+          <button type="button" className="link" onClick={() => go('register')}>Create an account</button>
+        )}
+      </div>
       <div className="account small"><ThemeToggle /></div>
     </form>
+  )
+}
+
+// The page a reset link from the email opens.
+function ResetPassword({ token, onDone }) {
+  const [password, setPassword] = useState('')
+  const [again, setAgain] = useState('')
+  const [error, setError] = useState('')
+  const submit = (e) => {
+    e.preventDefault()
+    if (password !== again) return setError('The two passwords are not the same.')
+    api('/password/reset', { method: 'POST', json: { token, password } }).then(onDone, (err) => setError(err.message))
+  }
+  return (
+    <form className="center auth" onSubmit={submit}>
+      <h1>Choose a new password</h1>
+      <p className="lede">After this you are signed in here, and signed out everywhere else.</p>
+      <label htmlFor="new-password">New password <span className="muted">(at least 8 characters)</span></label>
+      <input id="new-password" type="password" required minLength={8} autoFocus autoComplete="new-password"
+        value={password} onChange={(e) => setPassword(e.target.value)} />
+      <label htmlFor="again">The same password again</label>
+      <input id="again" type="password" required autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+      <button className="primary">Save password</button>
+      {error && <p className="error" role="alert">{error}</p>}
+    </form>
+  )
+}
+
+// Account, Claude connection and (for admins) the list of accounts.
+function Settings({ user, onUser, onBack, onLogout }) {
+  return (
+    <div className="center settings">
+      <button className="quiet back" onClick={onBack}>‹ My books</button>
+      <h1>Settings</h1>
+      <ClaudeConnection user={user} onChange={onUser} />
+      <AccountSettings user={user} onUser={onUser} onLogout={onLogout} />
+      {['owner', 'admin'].includes(user.role) && <Admin user={user} />}
+    </div>
+  )
+}
+
+function ClaudeConnection({ user, onChange }) {
+  const [conn, setConn] = useState(null)
+  const [key, setKey] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const load = () => api('/connection').then(setConn, (err) => setError(err.message))
+  useEffect(() => { load() }, [])
+  const done = (res) => { setConn(res); setKey(''); onChange() }
+  const run = (promise) => {
+    setBusy(true)
+    setError('')
+    promise.then(done, (err) => setError(err.message)).finally(() => setBusy(false))
+  }
+  const saveKey = (e) => {
+    e.preventDefault()
+    run(api('/connection/key', { method: 'PUT', json: { key } }))
+  }
+  if (!conn) return <section><h2>Claude</h2>{error ? <p className="error">{error}</p> : <p className="muted">Checking…</p>}</section>
+
+  const cc = conn.claude_code
+  const now = conn.provider === 'api' ? `your API key ending in …${conn.key_hint}`
+    : conn.provider === 'claude_code' ? 'Claude Code on the computer that runs this server' : null
+  return (
+    <section className="connection">
+      <h2>Claude</h2>
+      <p>{now ? <>The app uses <strong>{now}</strong>.</> : <strong className="error">Not connected yet. Add your API key below to get pages explained.</strong>}</p>
+      {cc.allowed && (
+        <div className="option">
+          <h3>Claude Code on this computer</h3>
+          <p className="muted small">
+            Uses the Claude Code login of the computer this server runs on, so it counts against that Claude plan.
+            Only you, the owner of this server, can use it. The app never sees the login itself.
+          </p>
+          {cc.status?.logged_in
+            ? <p>Signed in as <strong>{cc.status.email}</strong>{cc.status.plan && <> ({cc.status.plan} plan)</>}.</p>
+            : <p>Claude Code is not signed in. Open a terminal on the server and run <code>claude auth login</code>, then press Check again.</p>}
+          <div className="row">
+            {conn.provider !== 'claude_code' && (
+              <button className="primary" disabled={busy} onClick={() => run(api('/connection/provider', { method: 'PUT', json: { provider: 'claude_code' } }))}>
+                Use Claude Code
+              </button>
+            )}
+            <button disabled={busy} onClick={() => run(api('/connection'))}>Check again</button>
+          </div>
+        </div>
+      )}
+      <form className="option" onSubmit={saveKey}>
+        <h3>Your Anthropic API key</h3>
+        <p className="muted small">
+          Make a key at <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>.
+          Use is billed to your Anthropic account. The key is stored encrypted and is never shown again, here or anywhere else.
+        </p>
+        {conn.has_key && <p>Saved key: <code>sk-ant-…{conn.key_hint}</code></p>}
+        <label htmlFor="api-key">{conn.has_key ? 'Replace it with a new key' : 'API key'}</label>
+        <input id="api-key" type="password" autoComplete="off" spellCheck="false" placeholder="sk-ant-…"
+          value={key} onChange={(e) => setKey(e.target.value)} />
+        <div className="row">
+          <button className="primary" disabled={busy || key.trim().length < 20}>{busy ? 'Checking the key…' : 'Save key'}</button>
+          {conn.has_key && conn.provider !== 'api' && (
+            <button type="button" disabled={busy} onClick={() => run(api('/connection/provider', { method: 'PUT', json: { provider: 'api' } }))}>Use the saved key</button>
+          )}
+          {conn.has_key && (
+            <button type="button" className="link danger" disabled={busy}
+              onClick={() => window.confirm('Remove your saved API key?') && run(api('/connection/key', { method: 'DELETE' }))}>Remove key</button>
+          )}
+        </div>
+      </form>
+      {error && <p className="error" role="alert">{error}</p>}
+      {!cc.allowed && user.role !== 'user' && (
+        <p className="muted small">Claude Code on the server is only for the owner of this server.</p>
+      )}
+    </section>
+  )
+}
+
+function AccountSettings({ user, onUser, onLogout }) {
+  const [name, setName] = useState(user.name)
+  const [current, setCurrent] = useState('')
+  const [next, setNext] = useState('')
+  const [note, setNote] = useState('')
+  const [error, setError] = useState('')
+  const say = (text) => { setNote(text); setError('') }
+  const fail = (err) => { setError(err.message); setNote('') }
+
+  const saveName = (e) => {
+    e.preventDefault()
+    api('/me', { method: 'PUT', json: { name } }).then(() => { say('Name saved.'); onUser() }, fail)
+  }
+  const savePassword = (e) => {
+    e.preventDefault()
+    api('/me/password', { method: 'PUT', json: { current, new: next } }).then(() => {
+      setCurrent(''); setNext('')
+      say('Password saved. You were signed out on your other devices.')
+      onUser()
+    }, fail)
+  }
+  const signOutOthers = () => api('/logout/others', { method: 'POST' })
+    .then((res) => say(`Signed out on ${res.signed_out} other ${res.signed_out === 1 ? 'device' : 'devices'}.`), fail)
+  const removeAccount = () => {
+    if (!window.confirm('Delete your account, all books, chats and your skills? This cannot be undone.')) return
+    api('/me', { method: 'DELETE' }).then(onLogout, fail)
+  }
+
+  return (
+    <section>
+      <h2>Account</h2>
+      <p>{user.email}{user.role !== 'user' && <span className="muted"> · {user.role}</span>}</p>
+      <form className="row" onSubmit={saveName}>
+        <label htmlFor="my-name" className="sr-only">Name</label>
+        <input id="my-name" placeholder="Your name" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
+        <button disabled={name === user.name}>Save name</button>
+      </form>
+      <form className="option" onSubmit={savePassword}>
+        <h3>{user.has_password ? 'Change your password' : 'Set a password'}</h3>
+        {!user.has_password && <p className="muted small">You sign in with an email link{user.has_google ? ' or Google' : ''}. A password lets you sign in without email too.</p>}
+        {user.has_password && (
+          <>
+            <label htmlFor="current-password">Current password</label>
+            <input id="current-password" type="password" required autoComplete="current-password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+          </>
+        )}
+        <label htmlFor="next-password">New password <span className="muted">(at least 8 characters)</span></label>
+        <input id="next-password" type="password" required minLength={8} autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+        <div className="row"><button className="primary">Save password</button></div>
+      </form>
+      {note && <p role="status">{note}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="account small">
+        <button className="link" onClick={signOutOthers}>Sign out on other devices</button>
+        <a href="/api/export" download>Export my data</a>
+        <button className="link" onClick={onLogout}>Sign out</button>
+        {user.role !== 'owner' && <button className="link danger" onClick={removeAccount}>Delete my account</button>}
+      </div>
+    </section>
+  )
+}
+
+const shortDate = (d) => (d ? new Date(d).toLocaleDateString('en-CA') : 'never')
+
+// Every account on this server. Admins can turn accounts off or remove them; only the owner makes admins.
+function Admin({ user }) {
+  const [users, setUsers] = useState(null)
+  const [error, setError] = useState('')
+  const load = () => api('/admin/users').then(setUsers, (err) => setError(err.message))
+  useEffect(() => { load() }, [])
+  const change = (u, json) => api(`/admin/users/${u.id}`, { method: 'PUT', json }).then(load, (err) => setError(err.message))
+  const remove = (u) => window.confirm(`Delete ${u.email} with all their books and notes? This cannot be undone.`) &&
+    api(`/admin/users/${u.id}`, { method: 'DELETE' }).then(load, (err) => setError(err.message))
+  if (!users) return null
+  return (
+    <section>
+      <h2>Accounts on this server</h2>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="table-scroll">
+        <table className="admin">
+          <thead><tr><th>Account</th><th>Role</th><th>Books</th><th>Tokens</th><th>Last sign-in</th><th>Claude</th><th /></tr></thead>
+          <tbody>
+            {users.map((u) => {
+              const fixed = u.role === 'owner' || u.id === user.id
+              return (
+                <tr key={u.id} className={u.disabled ? 'off' : ''}>
+                  <td>{u.email}{u.name && <div className="muted small">{u.name}</div>}
+                    {!u.email_verified && <div className="muted small">email not confirmed</div>}
+                    {u.disabled && <div className="error small">turned off</div>}</td>
+                  <td>{u.role}</td>
+                  <td>{number(u.books)}</td>
+                  <td>{number(u.tokens)}</td>
+                  <td>{shortDate(u.last_sign_in)}</td>
+                  <td>{u.connection === 'api' ? 'API key' : u.connection === 'claude_code' ? 'Claude Code' : u.role === 'owner' ? 'Claude Code' : '—'}</td>
+                  <td className="actions">
+                    {!fixed && user.role === 'owner' && (
+                      <button className="link" onClick={() => change(u, { role: u.role === 'admin' ? 'user' : 'admin' })}>
+                        {u.role === 'admin' ? 'Remove admin' : 'Make admin'}
+                      </button>
+                    )}
+                    {!fixed && <button className="link" onClick={() => change(u, { disabled: !u.disabled })}>{u.disabled ? 'Turn on' : 'Turn off'}</button>}
+                    {!fixed && <button className="link danger" onClick={() => remove(u)}>Delete</button>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
   )
 }
 
 // File names make poor titles: "[O'Reilly] AI Engineering_Building..." Shown cleaner, saved as is.
 const cleanTitle = (title) => title.replace(/^\[[^\]]*\]\s*/, '').replaceAll('_', ' ')
 
-function Library({ user, onOpen, onLogout }) {
+function Library({ user, onOpen, onLogout, onSettings }) {
   const [books, setBooks] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -127,14 +415,15 @@ function Library({ user, onOpen, onLogout }) {
     )
   }
 
-  const removeAccount = () => {
-    if (!window.confirm('Delete your account, all books, chats and your skills? This cannot be undone.')) return
-    api('/me', { method: 'DELETE' }).then(onLogout, (err) => setError(err.message))
-  }
-
   return (
     <div className="center">
       <h1>My books</h1>
+      {!user.connection && (
+        <div className="suggestion">
+          <p>To get pages explained, connect Claude first: add your Anthropic API key.</p>
+          <button className="primary" onClick={onSettings}>Connect Claude</button>
+        </div>
+      )}
       {books.length === 0 && !error && (
         <p className="lede">No books yet. Add a PDF and start on page 1.</p>
       )}
@@ -163,11 +452,10 @@ function Library({ user, onOpen, onLogout }) {
       )}
       <Usage />
       <div className="account small">
-        <span className="muted">{user.email}</span>
+        <span className="muted">{user.name || user.email}</span>
         <ThemeToggle />
-        <button className="link" onClick={onLogout}>Log out</button>
-        <a href="/api/export" download>Export my data</a>
-        <button className="link danger" onClick={removeAccount}>Delete my account</button>
+        <button className="link" onClick={onSettings}>Settings</button>
+        <button className="link" onClick={onLogout}>Sign out</button>
       </div>
     </div>
   )

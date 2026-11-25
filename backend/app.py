@@ -1,70 +1,47 @@
-"""Reading Companion backend: login, upload, page view, cached page cards, search and chat.
+"""Reading Companion backend: upload, page view, cached page cards, search and chat.
+Accounts, sign-in and the Claude connection live in accounts.py.
 
 Run from this folder:  uvicorn app:app --port 8000
-Without SMTP_HOST the login has no check, so the app must then only listen on localhost.
 """
 import hashlib
 import os
 import re
 import secrets
-import smtplib
-import sys
 import threading
 import time
 from contextlib import asynccontextmanager
-from email.message import EmailMessage
 from pathlib import Path
 from typing import Literal
 
-from fastapi import BackgroundTasks, Cookie, Depends, FastAPI, HTTPException, Response, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
-from psycopg.rows import dict_row
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Response, UploadFile
+from fastapi.responses import FileResponse
 from psycopg.types.json import Jsonb
-from psycopg_pool import ConnectionPool
 from pydantic import BaseModel, Field
 
+import accounts
 import llm
 import reader_profile as profile
 import search
 import storage
+from accounts import current_user, llm_session
+from db import pool, q
 from parsing import chapters, figure_pages, page_image, parse_pdf, toc
 
 HERE = Path(__file__).parent
-# Login by magic link is on when SMTP_HOST is set. APP_URL is where the reader opens the app.
-SMTP_HOST = os.environ.get("SMTP_HOST")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
-MAIL_FROM = os.environ.get("MAIL_FROM", "Reading Companion <no-reply@localhost>")
-APP_URL = os.environ.get("APP_URL", "http://127.0.0.1:5173").rstrip("/")
-LINK_MINUTES = 15
-LINKS_PER_EMAIL = 5  # unused links one email may have at a time
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://reader:reader@127.0.0.1:5433/reader")  # not "localhost": it tries IPv6 first and hangs
+# The built frontend (npm run build). When it exists, this server shows the app too: one address,
+# one cookie, no CORS. In development Vite serves the frontend instead.
+FRONTEND = Path(os.environ.get("FRONTEND_DIR", HERE.parent / "frontend" / "dist"))
 MAX_UPLOAD = 500 * 1024 * 1024
 PREMAKE_PAGES = int(os.environ.get("PREMAKE_PAGES", "2"))  # cards made ahead of the reader. 0 turns it off.
 PREMAKE_AFTER_S = 5   # the reader must still be on the page after this long before the next cards are made
 MIN_PAGE_CHARS = 40  # below this the page has no real text (blank or scanned)
-
-# check: test a connection before using it. After the laptop sleeps, the saved connections are dead;
-# without this the first requests after waking up fail.
-pool = ConnectionPool(DATABASE_URL, kwargs={"row_factory": dict_row, "autocommit": True}, open=False,
-                      check=ConnectionPool.check_connection)
-# ponytail: one LLM call at a time for the whole app. Make it per account when there are many users.
-llm_lock = threading.Lock()
-
-
-def q(sql: str, params: tuple = ()) -> list[dict]:
-    with pool.connection() as conn:
-        cur = conn.execute(sql, params or None)  # None: a "%" in SQL without parameters is plain text
-        return cur.fetchall() if cur.description else []
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     pool.open(wait=True, timeout=15)
     q((HERE / "schema.sql").read_text())
-    if not SMTP_HOST:
-        print("WARNING: SMTP_HOST is not set. Anyone can log in as any email. Keep this on localhost.", file=sys.stderr)
+    accounts.setup()
     # A crash during parsing leaves books in 'parsing'. Start those again.
     for b in q("SELECT id, file_path FROM books WHERE status = 'parsing' AND file_path <> ''"):
         threading.Thread(target=ingest, args=(b["id"], b["file_path"]), daemon=True).start()
@@ -76,101 +53,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
-
-# ---- users and login -------------------------------------------------------
-
-class Login(BaseModel):
-    email: str
-
-
-def sha(token: str) -> str:
-    """Session and link tokens are saved only as a hash. A leaked database cannot be used to log in."""
-    return hashlib.sha256(token.encode()).hexdigest()
-
-
-def current_user(session: str | None = Cookie(None)) -> dict:
-    rows = q("SELECT u.id, u.email FROM sessions s JOIN users u ON u.id = s.user_id "
-             "WHERE s.token = %s AND s.expires_at > now()", (sha(session or ""),))
-    if not rows:
-        raise HTTPException(401, "Not logged in")
-    return rows[0]
-
-
-def start_session(response: Response, email: str) -> dict:
-    """Create the user if new, and set the session cookie."""
-    user = q("INSERT INTO users (email) VALUES (%s) ON CONFLICT (email) DO UPDATE SET email = EXCLUDED.email "
-             "RETURNING id, email", (email,))[0]
-    token = secrets.token_urlsafe(32)
-    q("DELETE FROM sessions WHERE expires_at < now()")
-    q("INSERT INTO sessions (token, user_id, expires_at) VALUES (%s, %s, now() + interval '30 days')",
-      (sha(token), user["id"]))
-    response.set_cookie("session", token, max_age=30 * 86400, httponly=True, samesite="lax",
-                        secure=APP_URL.startswith("https"))
-    return user
-
-
-def send_mail(to: str, subject: str, text: str) -> None:
-    msg = EmailMessage()
-    msg["From"], msg["To"], msg["Subject"] = MAIL_FROM, to, subject
-    msg.set_content(text)
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
-        smtp.ehlo()
-        if smtp.has_extn("starttls"):
-            smtp.starttls()
-        if SMTP_USER:
-            smtp.login(SMTP_USER, SMTP_PASSWORD or "")
-        smtp.send_message(msg)
-
-
-@app.post("/api/login")
-def login(body: Login, response: Response):
-    email = body.email.strip().lower()
-    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 254:
-        raise HTTPException(422, "Please type a valid email")
-    if not SMTP_HOST:  # local use: no check
-        return start_session(response, email)
-
-    q("DELETE FROM login_tokens WHERE expires_at < now()")
-    if q("SELECT count(*) AS n FROM login_tokens WHERE email = %s", (email,))[0]["n"] >= LINKS_PER_EMAIL:
-        raise HTTPException(429, "Too many login links. Use the last one we sent, or wait 15 minutes.")
-    token = secrets.token_urlsafe(32)
-    q("INSERT INTO login_tokens (token_hash, email, expires_at) VALUES (%s, %s, now() + make_interval(mins => %s))",
-      (sha(token), email, LINK_MINUTES))
-    try:
-        send_mail(email, "Your Reading Companion login link",
-                  f"Open this link to log in. It works once, for {LINK_MINUTES} minutes.\n\n"
-                  f"{APP_URL}/api/login/verify?token={token}\n\n"
-                  "If you did not ask for this, you can ignore this email.")
-    except (OSError, smtplib.SMTPException) as e:
-        q("DELETE FROM login_tokens WHERE token_hash = %s", (sha(token),))
-        raise HTTPException(502, "Could not send the login email. Try again later.") from e
-    return {"sent": True}
-
-
-@app.get("/api/login/verify")
-def verify_login(token: str):
-    """The link from the email. It works once."""
-    # ponytail: a mail scanner that opens links can use the link up before the reader does.
-    # If that happens, change this to a page with a "Log in" button that POSTs the token.
-    rows = q("DELETE FROM login_tokens WHERE token_hash = %s AND expires_at > now() RETURNING email", (sha(token),))
-    if not rows:
-        raise HTTPException(400, "This login link is not valid any more. Ask for a new one.")
-    response = RedirectResponse(APP_URL + "/", status_code=303)
-    start_session(response, rows[0]["email"])
-    return response
-
-
-@app.get("/api/me")
-def me(user: dict = Depends(current_user)):
-    return user
-
-
-@app.post("/api/logout")
-def logout(response: Response, session: str | None = Cookie(None)):
-    q("DELETE FROM sessions WHERE token = %s", (sha(session or ""),))
-    response.delete_cookie("session")
-    return {}
+app.include_router(accounts.router)
 
 
 @app.get("/api/export")
@@ -179,7 +62,7 @@ def export_data(response: Response, user: dict = Depends(current_user)):
     uid = (user["id"],)
     response.headers["Content-Disposition"] = 'attachment; filename="reading-companion-export.json"'
     return {
-        "user": q("SELECT email, created_at FROM users WHERE id = %s", uid)[0],
+        "user": q("SELECT email, name, role, created_at FROM users WHERE id = %s", uid)[0],
         "skills": q("SELECT skill, level, source, updated_at FROM reader_skills WHERE user_id = %s ORDER BY skill", uid),
         "skill_history": q("SELECT skill, old_level, new_level, source, changed_at FROM skill_history "
                            "WHERE user_id = %s ORDER BY id", uid),
@@ -194,17 +77,6 @@ def export_data(response: Response, user: dict = Depends(current_user)):
         "usage": q("SELECT feature, model, tokens_in, tokens_out, ms, created_at FROM usage_log "
                    "WHERE user_id = %s ORDER BY id", uid),
     }
-
-
-@app.delete("/api/me")
-def delete_account(response: Response, user: dict = Depends(current_user)):
-    """Remove the reader and everything that belongs to them: rows, search index, files."""
-    search.delete("user_id", user["id"])
-    q("DELETE FROM login_tokens WHERE email = %s", (user["email"],))
-    q("DELETE FROM users WHERE id = %s", (user["id"],))  # every other table follows by ON DELETE CASCADE
-    storage.delete(f"users/{user['id']}")
-    response.delete_cookie("session")
-    return {}
 
 
 # ---- books -----------------------------------------------------------------
@@ -400,7 +272,7 @@ def make_card(book: dict, page_no: int, user: dict, level: str | None = None, fe
         return card
     if only_saved:
         return {"not_made": True}
-    with llm_lock:
+    with llm_session(user):
         if not fresh and (card := cached()):  # another request made it while this one waited
             return card
         try:
@@ -495,6 +367,8 @@ def run_pages(book: dict, user: dict, job: dict) -> None:
                 job["empty" if card.get("no_text") else "done"].append(n)
             except HTTPException as e:
                 job["failed"].append({"page": n, "error": str(e.detail)})
+                if e.status_code == 409:  # no Claude connection: every next page would fail the same way
+                    break
             except Exception as e:  # noqa: BLE001  the run must end in a clear state, whatever happened
                 job["failed"].append({"page": n, "error": str(e)[:300]})
     finally:
@@ -623,7 +497,7 @@ def explain_selection(book_id: int, page_no: int, body: Selection, user: dict = 
 
     if note := cached():
         return note
-    with llm_lock:
+    with llm_session(user):
         if note := cached():
             return note
         try:
@@ -650,7 +524,7 @@ def page_check(book_id: int, page_no: int, user: dict = Depends(current_user)):
 
     if check := cached():
         return check
-    with llm_lock:
+    with llm_session(user):
         if check := cached():
             return check
         image = page_image(book["file_path"], page_no)
@@ -700,7 +574,7 @@ def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, 
              (book_id, start, end))
     level = profile.page_level([s["level"] for s in skill_rows(user["id"], [t["skill"] for t in tags])])
     figures = figure_pages(book["file_path"], start, end)
-    with llm_lock:  # ponytail: a long call (up to minutes). Page cards wait behind it; see llm_lock.
+    with llm_session(user):  # a long call (up to minutes). This reader's other LLM calls wait behind it.
         if not fresh and (guide := cached()):
             return guide
         try:
@@ -857,7 +731,7 @@ def skills_of_page(book_id: int, page_no: int, text: str, user: dict) -> list[st
         return tags
     if not text.strip():
         return []
-    with llm_lock:
+    with llm_session(user):
         if (tags := saved()) is not None:
             return tags
         try:
@@ -1030,7 +904,7 @@ def ask(book_id: int, body: Ask, user: dict = Depends(current_user)):
     # The search found the pages. What the reader saved on those pages is read straight from the database.
     notes = reader_notes(book, user["id"], body.page, sorted({h["page_no"] for h in hits} | {body.page}), body.chat_id,
                          scope)
-    with llm_lock:
+    with llm_session(user):
         try:
             result, usage = llm.answer(question, body.page, text, hits, history, level, skills,
                                        page_image(book["file_path"], body.page), notes)
@@ -1060,3 +934,17 @@ def ask(book_id: int, body: Ask, user: dict = Depends(current_user)):
         answered = conn.execute(insert, (chat_id, "assistant", result.answer, body.page, sources)).fetchone()
     log_usage(user["id"], "chat", usage)
     return {"chat_id": chat_id, "messages": [asked, answered], "profile_note": note}
+
+
+# ---- the built frontend ------------------------------------------------------
+# Last, so every /api route above wins. Any other path gets index.html: the app decides what to show.
+
+if FRONTEND.is_dir():
+    @app.get("/{path:path}", include_in_schema=False)
+    def frontend(path: str):
+        if path.startswith("api/"):
+            raise HTTPException(404, "Not found")
+        file = (FRONTEND / path).resolve()
+        if path and file.is_file() and FRONTEND.resolve() in file.parents:  # never a file outside the folder
+            return FileResponse(file)
+        return FileResponse(FRONTEND / "index.html")

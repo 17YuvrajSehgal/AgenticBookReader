@@ -86,6 +86,33 @@ button.quiet { border-color: transparent; color: var(--pencil); padding: 0.2rem 
 .account { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: baseline; margin-top: 1rem; }
 .account span { margin-right: auto; }
 
+/* ---- sign-in and settings ---- */
+.auth h2 { margin: 0.4rem 0 0; color: var(--ink); font: 600 1.25rem/1.3 var(--read); }
+.auth label { margin-bottom: -0.4rem; font-size: 0.95rem; }
+.auth input { font-size: 1.05rem; padding: 0.55rem 0.8rem; }
+.auth .google { align-self: flex-start; text-decoration: none; color: var(--ink); }
+.auth-links { display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.center.settings { max-width: 46rem; }
+.settings .back { align-self: flex-start; margin-left: -0.5rem; }
+.settings section { border-top: 1px solid var(--line); padding-top: 1.2rem; display: flex; flex-direction: column; gap: 0.7rem; }
+.settings section h2 { margin: 0; color: var(--ink); font: 600 1.3rem/1.3 var(--read); }
+.settings h3 { margin: 0; font-size: 1rem; }
+.settings .option { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 10px; }
+.settings .option p { margin: 0; }
+/* flex-direction: row, because ".center form" stacks every form on these pages into a column. */
+.settings .row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.settings .row input { flex: 1; min-width: 12rem; }
+.settings .account { margin-top: 0.4rem; }
+.settings .account span { margin-right: 0; }
+.table-scroll { overflow-x: auto; }
+.admin { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.admin th, .admin td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+.admin th { color: var(--pencil); font-weight: 400; }
+.admin tr.off td { color: var(--pencil); }
+.admin .actions { white-space: nowrap; display: flex; gap: 0.8rem; }
+
 progress { appearance: none; height: 4px; border: 0; border-radius: 2px; background: var(--line); overflow: hidden; }
 progress::-webkit-progress-bar { background: var(--line); }
 progress::-webkit-progress-value { background: var(--accent-ink); }
