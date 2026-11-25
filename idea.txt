@@ -1,0 +1,5 @@
+I am a terrible reader - who gets easily distracted. I am unable to read challenging words complex sentences, english is not my first language.
+
+There are a lot of people who are not good at reading. But I love to learn new things, so I want to develop a tool that will help me to learn new things. I have a claude subscription that can definitely help me to read these books. I want to develop a tool that will be able to use my claude code agent to help me to read these books. Think of it like a scratchpad, beside my book. while I have a page open, it should be able to read the page and explain it to me - I also want to make the process of learning faster instead of me reading every line. I want to be able to understand it immediately.
+
+I would like to make a tool that will instantly have the context of the book, previous pages, examples, formulas ideas that were discussed so that the agent can quickly help me with my problems - in case if i forgot something. But we also know that agents/LLMs context and memory is limited, we cannot just feed the whole book to the agent and expect it to be able to answer all the questions that i may have.

@@ -1,0 +1,27 @@
+# The backend runs on the host, not here: it needs the `claude` CLI login and (later) the GPU.
+services:
+  postgres:
+    image: postgres:17.2
+    environment:
+      POSTGRES_USER: reader
+      POSTGRES_PASSWORD: reader
+      POSTGRES_DB: reader
+    ports:
+      - "127.0.0.1:5433:5432"   # 5433 so it does not clash with a local Postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reader"]
+      interval: 2s
+      retries: 15
+
+  qdrant:
+    image: qdrant/qdrant:v1.20.0
+    ports:
+      - "127.0.0.1:6333:6333"
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+volumes:
+  pgdata:
+  qdrantdata:

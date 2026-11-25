@@ -1,0 +1,202 @@
+[
+  {
+    "page": 51,
+    "question": "What distinguishes AI engineering from traditional ML engineering in terms of what the practitioner does with models?"
+  },
+  {
+    "page": 69,
+    "question": "In the study of occupation-specific writing tasks with 453 professionals, by how much did average task time drop and output quality rise for those given ChatGPT?"
+  },
+  {
+    "page": 100,
+    "question": "What are the three main responsibilities of the model development layer in the AI engineering stack?"
+  },
+  {
+    "page": 123,
+    "question": "How did Gunasekar et al. (2023) show that a smaller model with high-quality data can beat larger models on coding benchmarks?"
+  },
+  {
+    "page": 144,
+    "question": "What does the final module after the transformer blocks do, and what is it sometimes called?"
+  },
+  {
+    "page": 169,
+    "question": "What two problems with pre-trained models is post-training meant to fix?"
+  },
+  {
+    "page": 173,
+    "question": "What is the term for the (prompt, response) example pairs used to teach a model to respond conversationally, and what is this process informally called?"
+  },
+  {
+    "page": 181,
+    "question": "Why did Meta move from RLHF to DPO between Llama 2 and Llama 3?"
+  },
+  {
+    "page": 185,
+    "question": "What objective is used to train a reward model from comparison data, according to the InstructGPT formula?"
+  },
+  {
+    "page": 234,
+    "question": "Why does evaluation get harder as AI models become more intelligent, as illustrated by book summaries?"
+  },
+  {
+    "page": 235,
+    "question": "Why is it hard to judge open-ended foundation model outputs against ground truths, compared with classification models in traditional ML?"
+  },
+  {
+    "page": 246,
+    "question": "If a language model has a bits-per-character of 3 and each character is 7 bits, what bits-per-byte value results, and what does that imply about compression?"
+  },
+  {
+    "page": 322,
+    "question": "Besides accuracy, which metrics are commonly used for classification tasks, which are treated as multiple choice with identical choices for every question?"
+  },
+  {
+    "page": 339,
+    "question": "How many naturally occurring prompts does the RealToxicityPrompts benchmark contain, and what is it designed to elicit from models?"
+  },
+  {
+    "page": 371,
+    "question": "Why is it beneficial to choose a model that follows a standard API, and whose API do many providers imitate?"
+  },
+  {
+    "page": 381,
+    "question": "Which eight benchmarks besides the Hugging Face leaderboard's are included in HELM Lite, and what criticism is raised about how coverage is chosen?"
+  },
+  {
+    "page": 392,
+    "question": "How many benchmarks did OpenAI find to have at least 40% of their data in GPT-3's training set, and what do they recommend public benchmarks do to combat contamination?"
+  },
+  {
+    "page": 393,
+    "question": "In the example of extracting a person's current employer from a resume PDF, what two steps make up the pipeline that should each be evaluated independently?"
+  },
+  {
+    "page": 417,
+    "question": "What did the OpenAI research manager say is the real problem regarding prompt engineering as a skill?"
+  },
+  {
+    "page": 456,
+    "question": "Why can prompt engineering tools unexpectedly inflate API bills?"
+  },
+  {
+    "page": 465,
+    "question": "What is the term for figuring out the hidden system prompt behind an AI application, and why might bad actors want to do it?"
+  },
+  {
+    "page": 472,
+    "question": "In the PAIR method for automated prompt attacks, what role does the attacker AI play and what steps does it follow against the target AI?"
+  },
+  {
+    "page": 486,
+    "question": "When safety-finetuning a model, why should it be trained to handle borderline requests like asking how to get into a locked room, and what response is ideal?"
+  },
+  {
+    "page": 491,
+    "question": "Why does the book say a model needs more than instructions to accomplish a task, and what topic is covered in the following chapter?"
+  },
+  {
+    "page": 494,
+    "question": "What are the two dominant patterns for constructing context for a model, and how does each one gather information?"
+  },
+  {
+    "page": 517,
+    "question": "How do HNSW and LSH compare in terms of index build cost versus query accuracy and speed?"
+  },
+  {
+    "page": 521,
+    "question": "What is recursive chunking of documents, and how does it reduce the chance of splitting related text apart?"
+  },
+  {
+    "page": 554,
+    "question": "What is the main difference between reinforcement learning agents and foundation model agents in how their planners work?"
+  },
+  {
+    "page": 577,
+    "question": "In agent planning failures, what is an example of calling a valid tool with incorrect parameter values, such as with the lbs_to_kg tool?"
+  },
+  {
+    "page": 583,
+    "question": "How should information be allocated among internal knowledge, long-term memory, and short-term memory based on how frequently it is needed?"
+  },
+  {
+    "page": 601,
+    "question": "Why might an application developer usually end up finetuning a model that has already been post-trained rather than a raw pre-trained one?"
+  },
+  {
+    "page": 619,
+    "question": "How much memory would the weights of a 13-billion-parameter model need in 32-bit format versus when each value is reduced to 2 bytes?"
+  },
+  {
+    "page": 631,
+    "question": "What went wrong when many teams loaded Llama 2 in FP16 even though it was released with BF16 weights?"
+  },
+  {
+    "page": 671,
+    "question": "What is a task vector, and how can it be used to remove undesirable behaviors from a model?"
+  },
+  {
+    "page": 677,
+    "question": "Which technique did Kim et al. (2023) use to build SOLAR 10.7B from a 7B-parameter model with 32 layers?"
+  },
+  {
+    "page": 688,
+    "question": "Why did full finetuning become impractical for most practitioners as models grew larger?"
+  },
+  {
+    "page": 696,
+    "question": "How does data-centric AI differ from model-centric AI in how it tries to improve performance?"
+  },
+  {
+    "page": 709,
+    "question": "Besides domain, what other diversity axes does post-training data have, and what extra dimension applies to Llama 3 because of its synthetic data?"
+  },
+  {
+    "page": 718,
+    "question": "Why do additional finetuning examples typically give diminishing returns as the dataset grows, according to the performance gain curve?"
+  },
+  {
+    "page": 731,
+    "question": "What is procedural generation, and how can a template with a tool like Faker be used to create synthetic credit card transactions?"
+  },
+  {
+    "page": 744,
+    "question": "When extending a model from an 8K-token limit toward 128K using synthetic data, what source text is used as the context for each generated question-answer pair?"
+  },
+  {
+    "page": 763,
+    "question": "What improvements did Databricks report after stripping stray Markdown and HTML tokens from their training data?"
+  },
+  {
+    "page": 770,
+    "question": "In the footnote comparing GPT-3 and GPT-4 contributor lists, roughly how many people were credited with data work for GPT-4 versus GPT-3?"
+  },
+  {
+    "page": 780,
+    "question": "Why is the prefill step of language model inference limited by compute, while the decode step is limited by memory bandwidth?"
+  },
+  {
+    "page": 807,
+    "question": "Which three key numbers help decide whether a chip can run your workload and how long it will take?"
+  },
+  {
+    "page": 834,
+    "question": "How does a batching method that processes a batch when it fills up or when a time window like 100 ms expires differ from one that waits for a fixed number of requests?"
+  },
+  {
+    "page": 846,
+    "question": "What is the difference between model-level and inference service-level optimization in terms of effect on model behavior?"
+  },
+  {
+    "page": 847,
+    "question": "Why might a team prioritizing low latency over cost choose to scale up replica parallelism?"
+  },
+  {
+    "page": 854,
+    "question": "What is the suggested order of components to add when expanding a basic AI application architecture, starting with context enhancement?"
+  },
+  {
+    "page": 863,
+    "question": "What are the benefits of using a router to send different queries to different models instead of one model for everything?"
+  }
+]
