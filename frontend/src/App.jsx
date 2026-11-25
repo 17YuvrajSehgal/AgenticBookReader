@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import 'react-pdf/dist/Page/TextLayer.css'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
@@ -313,6 +315,8 @@ function Reader({ book: initial, onClose }) {
   // Goes up when the reader profile changes, so the card and the skills list load again.
   const [profileVersion, setProfileVersion] = useState(0)
   const profileChanged = () => setProfileVersion((v) => v + 1)
+  // Pages saved so far by a whole-PDF run. When it goes up, the page card and the notes load again.
+  const [cardsMade, setCardsMade] = useState(0)
 
   // A page that was open for a while and then left counts as "read". The backend decides if that
   // is a sign of comfort. Under 20 seconds is flipping; over 15 minutes the reader was away.
@@ -529,7 +533,7 @@ function Reader({ book: initial, onClose }) {
           {/* All stay mounted, so a chat is not lost when you look at the page card. */}
           <div hidden={tab !== 'page'}>
             {note && <SelectionNote note={note} onClose={() => setNote(null)} />}
-            <PageCard key={page} book={book} page={page} version={profileVersion} onProfileChange={profileChanged} autoRead={autoRead} />
+            <PageCard key={page} book={book} page={page} version={`${profileVersion}-${cardsMade}`} onProfileChange={profileChanged} autoRead={autoRead} />
           </div>
           <div hidden={tab !== 'chapter'}>
             <ChapterGuide book={book} page={page} toc={toc} numPages={numPages} go={go} active={tab === 'chapter'} onAsk={askChapter} />
@@ -539,7 +543,7 @@ function Reader({ book: initial, onClose }) {
           </div>
           <div hidden={tab !== 'notes'}>
             <Notebook book={book} page={page} chapters={chapters} highlights={highlights} go={go} active={tab === 'notes'}
-              openChat={openChat} removeHighlight={removeHighlight} />
+              openChat={openChat} removeHighlight={removeHighlight} onBookChange={setBook} made={cardsMade} onProgress={setCardsMade} />
           </div>
           <div hidden={tab !== 'skills'}>
             <Skills active={tab === 'skills'} version={profileVersion} onProfileChange={profileChanged} />
@@ -617,6 +621,13 @@ function PageLink({ page, go }) {
 
 const INKS = ['yellow', 'green', 'pink', 'blue']
 
+// LaTeX from the LLM, drawn as a real formula. Bad LaTeX is shown as plain text in red, never as an
+// error. KaTeX's default (trust: false) blocks \href and other commands that could run or link.
+function Formula({ latex }) {
+  const html = katex.renderToString(latex.trim().replace(/^\$+|\$+$/g, ''), { displayMode: true, throwOnError: false })
+  return <div className="formula" dangerouslySetInnerHTML={{ __html: html }} />
+}
+
 const chapterOf = (chapters, page) => chapters.findLast((c) => c.start <= page)
 
 // The selected text as one box per line: [left, top, width, height], each a part of the page size.
@@ -647,13 +658,14 @@ function lineRects(range, sheet) {
 
 // Everything the reader saved in this book, under the chapter it belongs to: the chapter summary,
 // page summaries, chats and highlights. Nothing here calls the LLM.
-function Notebook({ book, page, chapters, highlights, go, active, openChat, removeHighlight }) {
+function Notebook({ book, page, chapters, highlights, go, active, openChat, removeHighlight, onBookChange, made, onProgress }) {
   const [notes, setNotes] = useState(null)
   useEffect(() => {
     if (active) api(`/books/${book.id}/notes`).then(setNotes, () => {})
-  }, [book.id, active])
+  }, [book.id, active, made])
 
   if (!notes) return null
+  const panel = <WholePdf book={book} active={active} onBookChange={onBookChange} onProgress={onProgress} />
   const inside = (c, p) => p >= c.start && p <= c.end
   const groups = chapters.map((c) => ({
     ...c,
@@ -665,14 +677,18 @@ function Notebook({ book, page, chapters, highlights, go, active, openChat, remo
 
   if (groups.length === 0) {
     return (
-      <p className="muted">
-        Nothing saved yet. Page summaries, chats and the text you highlight are collected here, chapter by chapter.
-      </p>
+      <div className="notebook">
+        {panel}
+        <p className="muted">
+          Nothing saved yet. Page summaries, chats and the text you highlight are collected here, chapter by chapter.
+        </p>
+      </div>
     )
   }
   const count = (n, one, many) => (n > 0 ? [`${n} ${n === 1 ? one : many}`] : [])
   return (
     <div className="notebook">
+      {panel}
       {groups.map((g) => (
         <details key={g.start} open={inside(g, page)}>
           <summary>
@@ -719,7 +735,16 @@ function Notebook({ book, page, chapters, highlights, go, active, openChat, remo
                 {g.cards.map((c) => (
                   <li key={c.page_no} className="pagesum">
                     <span className="pages"><PageLink page={c.page_no} go={go} /></span>
+                    {c.card.section && <span className="muted small"> {c.card.section}</span>}
                     <ul>{c.bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
+                    {c.card.formulas?.length > 0 && (
+                      <ul className="formulas">
+                        {c.card.formulas.map((f, i) => <li key={i}><Formula latex={f.formula} />{f.meaning}</li>)}
+                      </ul>
+                    )}
+                    {c.card.concerns?.length > 0 && (
+                      <ul className="concerns">{c.card.concerns.map((x, i) => <li key={i}>{x}</li>)}</ul>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -728,6 +753,87 @@ function Notebook({ book, page, chapters, highlights, go, active, openChat, remo
         </details>
       ))}
     </div>
+  )
+}
+
+// Make the page summary of every page in a range, in the background, and save them all as one .md file.
+function WholePdf({ book, active, onBookChange, onProgress }) {
+  const last = book.page_count || 1
+  const [range, setRange] = useState({ start: 1, end: last })
+  const [redo, setRedo] = useState(false)
+  const [job, setJob] = useState(null)
+  const [error, setError] = useState('')
+
+  // Look at the run while this tab is open. Every few seconds while it is going.
+  useEffect(() => {
+    if (!active) return
+    let timer
+    const check = () => api(`/books/${book.id}/run`).then((j) => {
+      setJob(j)
+      onProgress(j.done?.length ?? 0)
+      if (j.running) timer = setTimeout(check, 3000)
+    }, () => {})
+    check()
+    return () => clearTimeout(timer)
+  }, [book.id, active, job?.running])
+
+  const setKind = (paper) => api(`/books/${book.id}/kind`, { method: 'PUT', json: { kind: paper ? 'paper' : 'book' } })
+    .then(onBookChange, (err) => setError(err.message))
+
+  const start = () => {
+    const pages = range.end - range.start + 1
+    // Each page is one or two LLM calls. Ask before a long run.
+    if (pages > 30 && !window.confirm(`This makes a summary for ${pages} pages, one Claude call or more per page. It can take a long time. Start?`)) return
+    setError('')
+    api(`/books/${book.id}/run`, { method: 'POST', json: { ...range, redo } }).then(setJob, (err) => setError(err.message))
+  }
+  const stop = () => api(`/books/${book.id}/run`, { method: 'DELETE' }).then(setJob, () => {})
+  const pick = (key) => (e) => setRange((r) => ({ ...r, [key]: Math.min(Math.max(1, e.target.valueAsNumber || 1), last) }))
+
+  const total = job?.start ? job.end - job.start + 1 : 0
+  const finished = job?.start ? job.done.length + job.empty.length + job.failed.length : 0
+  return (
+    <section className="whole-pdf">
+      <h2>Whole PDF</h2>
+      <label className="check">
+        <input type="checkbox" checked={book.kind === 'paper'} disabled={job?.running} onChange={(e) => setKind(e.target.checked)} />
+        This is a research paper: cover every claim and number, explain what results mean, and list what to question
+      </label>
+      <div className="row">
+        <span>Pages</span>
+        <input type="number" min="1" max={last} value={range.start} onChange={pick('start')} aria-label="First page" disabled={job?.running} />
+        <span>to</span>
+        <input type="number" min="1" max={last} value={range.end} onChange={pick('end')} aria-label="Last page" disabled={job?.running} />
+        <label className="check">
+          <input type="checkbox" checked={redo} onChange={(e) => setRedo(e.target.checked)} disabled={job?.running} />
+          Redo pages that already have one
+        </label>
+      </div>
+      <div className="row">
+        {job?.running
+          ? <button onClick={stop} disabled={job.stop}>{job.stop ? 'Stopping after this page…' : 'Stop'}</button>
+          : <button className="primary" onClick={start} disabled={range.start > range.end}>Summarize every page</button>}
+        <a href={`/api/books/${book.id}/summary.md`} download>Save all summaries as .md</a>
+      </div>
+      {job?.start && (
+        <div className="progress" role="status">
+          <progress value={finished} max={total} aria-label="Pages done" />
+          <span className="muted small">
+            {job.running ? `Page ${job.current ?? job.start}. ` : job.stop ? 'Stopped. ' : 'Done. '}
+            {finished} of {total} pages
+            {job.empty.length > 0 && `, ${job.empty.length} with no text`}
+            {job.failed.length > 0 && `, ${job.failed.length} failed`}.
+          </span>
+          {job.failed.length > 0 && (
+            <p className="error small">
+              Failed: pages {job.failed.map((f) => f.page).join(', ')}. Press the button again to try only the missing pages.
+              {' '}({job.failed[0].error})
+            </p>
+          )}
+        </div>
+      )}
+      {error && <p className="error">{error}</p>}
+    </section>
   )
 }
 
@@ -751,7 +857,9 @@ const PAGE_VALUES = { read: 'Read it', skim: 'Skim', skip: 'Can skip', unchecked
 // every page, so the reader can see that no page was left out.
 function ChapterGuide({ book, page, toc, numPages, go, active, onAsk }) {
   const [question, setQuestion] = useState('')
-  const sections = sectionsAt(toc, page, numPages || 0)
+  // No table of contents (most research papers): the whole document is one part.
+  const sections = toc.length > 0 ? sectionsAt(toc, page, numPages || 0)
+    : numPages ? [{ id: -1, level: 1, title: 'Whole document', start: 1, end: numPages }] : []
   const fits = (s) => s.end - s.start + 1 <= GUIDE_MAX_PAGES
   const [pickedId, setPickedId] = useState(null)
   const section = sections.find((s) => s.id === pickedId && fits(s)) || sections.find(fits)
@@ -759,13 +867,21 @@ function ChapterGuide({ book, page, toc, numPages, go, active, onAsk }) {
   const [asked, setAsked] = useState(null) // the range the reader asked a guide for
   const [tries, setTries] = useState(0)
   const [state, setState] = useState({ loading: true })
+  const fresh = useRef(false) // Regenerate: used by the next load only
+  const regenerate = () => {
+    fresh.current = true
+    setAsked(range)
+    setTries((t) => t + 1)
+  }
 
   useEffect(() => {
     if (!active || !range) return
     let live = true
     setState({ loading: true })
     // Until the reader asks, only a saved guide is fetched. That costs nothing.
-    api(`/books/${book.id}/guide?${range}${asked === range ? '' : '&only_saved=true'}`).then(
+    const extra = fresh.current ? '&fresh=true' : asked === range ? '' : '&only_saved=true'
+    fresh.current = false
+    api(`/books/${book.id}/guide?${range}${extra}`).then(
       (guide) => live && setState({ guide }),
       (err) => live && setState({ error: err.message }),
     )
@@ -773,8 +889,12 @@ function ChapterGuide({ book, page, toc, numPages, go, active, onAsk }) {
   }, [book.id, range, asked, tries, active])
 
   if (book.status !== 'ready') return <p className="muted">Reading the book for the first time…</p>
-  if (toc.length === 0) {
-    return <p className="muted">This PDF has no table of contents, so the tool cannot tell where a chapter starts and ends.</p>
+  if (toc.length === 0 && !section) {
+    return (
+      <p className="muted">
+        This PDF has no table of contents, and it is longer than {GUIDE_MAX_PAGES} pages, so it cannot be cut into chapters.
+      </p>
+    )
   }
   if (!section) {
     return (
@@ -844,7 +964,8 @@ function ChapterGuide({ book, page, toc, numPages, go, active, onAsk }) {
           </ul>
           <p className="muted small">
             Made from the text of pages {section.start} to {section.end}, for a {guide.level} reader.
-            Figures were not looked at. Their pages are marked.
+            Figures were not looked at. Their pages are marked.{' '}
+            <button className="link" onClick={regenerate}>Regenerate this guide</button>
           </p>
           <form className="ask-chapter" onSubmit={(e) => {
             e.preventDefault()
@@ -1073,6 +1194,14 @@ function PageCard({ book, page, version, onProfileChange, autoRead }) {
   const [state, setState] = useState({ loading: true })
   const [level, setLevel] = useState(null) // set by Simpler / Too simple, for this page only
   const [asked, setAsked] = useState(false) // the reader pressed Explain now on this page
+  // Regenerate: the next load makes the card again. A ref, so it is used once and a later
+  // reload (for another reason) does not regenerate again.
+  const fresh = useRef(false)
+  const [regenerated, setRegenerated] = useState(0)
+  const regenerate = () => {
+    fresh.current = true
+    setRegenerated((n) => n + 1)
+  }
 
   useEffect(() => {
     if (book.status !== 'ready') return
@@ -1085,6 +1214,8 @@ function PageCard({ book, page, version, onProfileChange, autoRead }) {
     if (level) query.set('level', level)
     if (!mayCallLLM) query.set('only_saved', 'true')
     if (!autoRead) query.set('ahead', 'false') // no cards for the next pages either
+    if (fresh.current) query.set('fresh', 'true')
+    fresh.current = false
     // With auto read on, wait a moment, so flipping fast through pages does not spend LLM calls
     // on pages nobody reads.
     const timer = setTimeout(() => {
@@ -1097,7 +1228,7 @@ function PageCard({ book, page, version, onProfileChange, autoRead }) {
       live = false
       clearTimeout(timer)
     }
-  }, [book.id, book.status, page, level, version, autoRead, asked])
+  }, [book.id, book.status, book.kind, page, level, version, autoRead, asked, regenerated])
 
   // The click is saved as evidence for the skills on this page, and the card is shown one level over.
   const react = (signal, by) => {
@@ -1147,7 +1278,9 @@ function PageCard({ book, page, version, onProfileChange, autoRead }) {
         {'speechSynthesis' in window && <button onClick={speak}>{speaking ? 'Stop reading' : 'Read aloud'}</button>}
         <button disabled={card.level === 'beginner'} onClick={() => react('difficulty', -1)}>Simpler</button>
         <button disabled={card.level === 'comfortable'} onClick={() => react('comfort', 1)}>Too simple</button>
+        <button onClick={regenerate} title="Explain this page again and replace the saved explanation">Regenerate</button>
       </div>
+      {card.section && <p className="section muted small">{card.section}</p>}
       <ul className="points">{card.bullets.map((b, i) => <li key={i}>{b}</li>)}</ul>
       <p className="muted small">
         Written for a reader who is {card.level === 'beginner' ? 'new to' : card.level === 'learning' ? 'learning' : 'comfortable with'}{' '}
@@ -1157,11 +1290,16 @@ function PageCard({ book, page, version, onProfileChange, autoRead }) {
         <>
           <h2>Formulas</h2>
           <dl>
-            {/* ponytail: raw LaTeX text. Add KaTeX when the parser gives clean LaTeX. */}
             {card.formulas.map((f, i) => (
-              <div key={i}><dt><code>{f.formula}</code></dt><dd>{f.meaning}</dd></div>
+              <div key={i}><dt><Formula latex={f.formula} /></dt><dd>{f.meaning}</dd></div>
             ))}
           </dl>
+        </>
+      )}
+      {card.concerns?.length > 0 && (
+        <>
+          <h2>To question</h2>
+          <ul className="concerns">{card.concerns.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </>
       )}
       <PageCheck book={book} page={page} />

@@ -209,7 +209,7 @@ def delete_account(response: Response, user: dict = Depends(current_user)):
 
 # ---- books -----------------------------------------------------------------
 
-BOOK_COLS = "id, title, status, index_status, error, page_count, last_page, created_at"
+BOOK_COLS = "id, title, kind, status, index_status, error, page_count, last_page, created_at"
 
 
 def get_book(book_id: int, user: dict) -> dict:
@@ -342,11 +342,29 @@ def log_usage(user_id: int, feature: str, usage: dict) -> None:
       (user_id, feature, usage["model"], usage["tokens_in"], usage["tokens_out"], usage["ms"]))
 
 
+EARLIER_FORMULA_PAGES = 30  # formulas explained on this many pages before count as "already explained"
+
+
+def earlier_pages(book_id: int, page_no: int) -> dict:
+    """What the reader got from the pages before, so a new card does not repeat it: the previous page's
+    bullets and the formulas explained in recent pages. Read from saved cards: no LLM call."""
+    prev = q("SELECT card_json->'bullets' AS bullets FROM page_cards WHERE book_id = %s AND page_no = %s "
+             "ORDER BY created_at DESC LIMIT 1", (book_id, page_no - 1))
+    formulas = q("SELECT DISTINCT ON (f->>'formula') page_no, f->>'formula' AS formula "
+                 "FROM page_cards, jsonb_array_elements(card_json->'formulas') f "
+                 "WHERE book_id = %s AND page_no BETWEEN %s AND %s ORDER BY f->>'formula', page_no",
+                 (book_id, page_no - EARLIER_FORMULA_PAGES, page_no - 1))
+    formulas = sorted(formulas, key=lambda r: r["page_no"])[-20:]
+    return {"page": page_no - 1, "bullets": prev[0]["bullets"] if prev else [],
+            "formulas": [(r["page_no"], r["formula"]) for r in formulas]}
+
+
 def make_card(book: dict, page_no: int, user: dict, level: str | None = None, feature: str = "page_card",
-              only_saved: bool = False) -> dict:
+              only_saved: bool = False, fresh: bool = False) -> dict:
     """The page card, from the cache or made now. level=None: the reader profile decides.
 
     only_saved: never call the LLM. Returns {"not_made": True} when no card is saved for this page.
+    fresh: make it again (after a prompt change) and replace the saved cards of this page, at every level.
     """
     book_id = book["id"]
     text = page_text(book_id, page_no)
@@ -367,29 +385,45 @@ def make_card(book: dict, page_no: int, user: dict, level: str | None = None, fe
     auto_level = profile.page_level([s["level"] for s in states])
     use = level or auto_level
 
+    kind = book.get("kind") or "book"
+
     def cached():
-        rows = q("SELECT card_json FROM page_cards WHERE book_id = %s AND page_no = %s AND level = %s",
-                 (book_id, page_no, use))
+        # A card made for the other kind (book or paper) does not count: it has the other shape.
+        rows = q("SELECT card_json FROM page_cards WHERE book_id = %s AND page_no = %s AND level = %s "
+                 "AND coalesce(card_json->>'kind', 'book') = %s", (book_id, page_no, use, kind))
         if not rows:
             return None
         # Only the LLM output is saved. The skills are looked up fresh each time.
         return {**rows[0]["card_json"], "level": use, "auto_level": auto_level, "skills": states}
 
-    if card := cached():
+    if not fresh and (card := cached()):
         return card
     if only_saved:
         return {"not_made": True}
     with llm_lock:
-        if card := cached():  # another request made it while this one waited
+        if not fresh and (card := cached()):  # another request made it while this one waited
             return card
         try:
             # A page with a figure is sent as a picture too. The text layer cannot show a diagram.
             image = image or page_image(book["file_path"], page_no)
-            result, usage = llm.explain_page(book["title"], page_no, text, use, image)
+            earlier = earlier_pages(book_id, page_no)
+            if kind == "paper":
+                # The end of the previous page, so a paragraph or table split over two pages is understood.
+                before = q("SELECT text_md FROM pages WHERE book_id = %s AND page_no = %s", (book_id, page_no - 1))
+                result, usage = llm.explain_paper_page(book["title"], page_no, text, use, image,
+                                                       before[0]["text_md"][-800:] if before else "", earlier)
+            else:
+                result, usage = llm.explain_page(book["title"], page_no, text, use, image, earlier)
         except llm.LLMError as e:
-            raise HTTPException(502, str(e))  # a bad output is never saved
-        q("INSERT INTO page_cards (book_id, page_no, level, card_json, model) VALUES (%s, %s, %s, %s, %s) "
-          "ON CONFLICT DO NOTHING", (book_id, page_no, use, Jsonb(result.model_dump()), usage["model"]))
+            raise HTTPException(502, str(e))  # a bad output is never saved, and the old card stays
+        with pool.connection() as conn, conn.transaction():
+            if fresh:  # the cards at the other levels were made with the old prompt too
+                conn.execute("DELETE FROM page_cards WHERE book_id = %s AND page_no = %s", (book_id, page_no))
+            # DO UPDATE: a saved card of the other kind at this level is replaced.
+            conn.execute("INSERT INTO page_cards (book_id, page_no, level, card_json, model) "
+                         "VALUES (%s, %s, %s, %s, %s) ON CONFLICT (book_id, page_no, level) DO UPDATE SET "
+                         "card_json = EXCLUDED.card_json, model = EXCLUDED.model, created_at = now()",
+                         (book_id, page_no, use, Jsonb({**result.model_dump(), "kind": kind}), usage["model"]))
         log_usage(user["id"], feature, usage)
     return cached()
 
@@ -411,17 +445,149 @@ def premake(book: dict, page_no: int, user: dict) -> None:
 
 @app.get("/api/books/{book_id}/pages/{page_no}/card")
 def page_card(book_id: int, page_no: int, background: BackgroundTasks, level: str | None = None,
-              only_saved: bool = False, ahead: bool = True, user: dict = Depends(current_user)):
+              only_saved: bool = False, ahead: bool = True, fresh: bool = False, user: dict = Depends(current_user)):
     """level: set when the reader clicked Simpler or Too simple.
 
     Auto read off in the app means: only_saved=true when a page opens (no LLM call), and ahead=false
     when the reader presses Explain now (make this card, but not the next pages).
+    fresh: the reader pressed Regenerate. The saved cards of this page are replaced.
     """
     book = get_book(book_id, user)
-    card = make_card(book, page_no, user, level, only_saved=only_saved)
-    if ahead and not only_saved:
+    card = make_card(book, page_no, user, level, only_saved=only_saved and not fresh,
+                     feature="page_card_regenerated" if fresh else "page_card", fresh=fresh)
+    if ahead and not only_saved and not fresh:
         background.add_task(premake, book, page_no, user)  # runs after the answer is sent
     return card
+
+
+# ---- the whole PDF at once ---------------------------------------------------
+# ponytail: job state lives in memory. A backend restart loses it, but every finished card is saved,
+# so pressing Start again goes on from where it stopped. Add a jobs table if that is not enough.
+jobs: dict[int, dict] = {}  # book_id -> progress of its run
+
+
+class Kind(BaseModel):
+    kind: Literal["book", "paper"]
+
+
+@app.put("/api/books/{book_id}/kind")
+def set_kind(book_id: int, body: Kind, user: dict = Depends(current_user)):
+    """A paper gets fuller page summaries. Cards made for the other kind are not shown, and are made again."""
+    get_book(book_id, user)
+    return q(f"UPDATE books SET kind = %s WHERE id = %s RETURNING {BOOK_COLS}", (body.kind, book_id))[0]
+
+
+class Run(BaseModel):
+    start: int = Field(ge=1)
+    end: int = Field(ge=1)
+    redo: bool = False  # True: make again the pages that already have a summary
+
+
+def run_pages(book: dict, user: dict, job: dict) -> None:
+    """One page after another. A failed page is noted and the run goes on, so one bad page does not stop it."""
+    try:
+        for n in range(job["start"], job["end"] + 1):
+            if job["stop"]:
+                break
+            job["current"] = n
+            try:
+                card = make_card(book, n, user, feature="page_card_whole_pdf", fresh=job["redo"])
+                job["empty" if card.get("no_text") else "done"].append(n)
+            except HTTPException as e:
+                job["failed"].append({"page": n, "error": str(e.detail)})
+            except Exception as e:  # noqa: BLE001  the run must end in a clear state, whatever happened
+                job["failed"].append({"page": n, "error": str(e)[:300]})
+    finally:
+        job["current"] = None
+        job["running"] = False
+
+
+@app.post("/api/books/{book_id}/run")
+def start_run(book_id: int, body: Run, user: dict = Depends(current_user)):
+    book = get_book(book_id, user)
+    if not body.start <= body.end <= (book["page_count"] or 0):
+        raise HTTPException(422, "These pages are not in the book")
+    if jobs.get(book_id, {}).get("running"):
+        raise HTTPException(409, "A run is already going for this book")
+    job = jobs[book_id] = {"start": body.start, "end": body.end, "redo": body.redo, "running": True, "stop": False,
+                           "current": None, "done": [], "empty": [], "failed": []}
+    threading.Thread(target=run_pages, args=(book, user, job), daemon=True).start()
+    return job
+
+
+@app.get("/api/books/{book_id}/run")
+def run_status(book_id: int, user: dict = Depends(current_user)):
+    get_book(book_id, user)
+    return jobs.get(book_id) or {"running": False}
+
+
+@app.delete("/api/books/{book_id}/run")
+def stop_run(book_id: int, user: dict = Depends(current_user)):
+    """The page being made now is finished first. Then the run stops."""
+    get_book(book_id, user)
+    if job := jobs.get(book_id):
+        job["stop"] = True
+    return jobs.get(book_id) or {"running": False}
+
+
+def md_card(card: dict) -> list[str]:
+    out = [f"- {b}" for b in card.get("bullets", [])]
+    if card.get("formulas"):
+        out += ["", "Formulas:"]
+        for f in card["formulas"]:
+            # A $$ block is drawn as a real equation by GitHub, VS Code, Obsidian and Typora.
+            # The LLM sometimes wraps the LaTeX in $ or $$ itself; those are taken off first.
+            latex = f["formula"].strip().strip("$").strip()
+            out += ["", "$$", latex, "$$", "", f["meaning"]]
+    if card.get("concerns"):
+        out += ["", "To question:"] + [f"- {c}" for c in card["concerns"]]
+    return out
+
+
+@app.get("/api/books/{book_id}/summary.md")
+def summary_markdown(book_id: int, user: dict = Depends(current_user)):
+    """Every saved page summary, chapter guide and highlight, as one Markdown file. No LLM call.
+    Pages without a summary are listed at the end, so nothing is missing without you knowing."""
+    book = get_book(book_id, user)
+    count = book["page_count"] or 0
+    cards = {r["page_no"]: r["card"] for r in q(CARDS_SQL.format(more=""), (book_id,))}
+    guides = q("SELECT start_page, end_page, guide_json FROM chapter_guides WHERE book_id = %s "
+               "ORDER BY start_page, end_page DESC", (book_id,))
+    marks = q("SELECT page_no, text FROM highlights WHERE book_id = %s ORDER BY page_no, id", (book_id,))
+    empty = {r["page_no"] for r in q("SELECT page_no FROM pages WHERE book_id = %s AND length(trim(text_md)) < %s",
+                                     (book_id, MIN_PAGE_CHARS))}
+
+    lines = [f"# {book['title']}", "", f"Summaries from Reading Companion, {time.strftime('%Y-%m-%d')}."]
+    for ch in chapters(toc(book["file_path"]), count):
+        inside = range(ch["start"], ch["end"] + 1)
+        ch_guides = [g for g in guides if g["start_page"] in inside]
+        ch_pages = [n for n in inside if n in cards or any(m["page_no"] == n for m in marks)]
+        if not ch_guides and not ch_pages:
+            continue
+        lines += ["", f"## {ch['title']} (pages {ch['start']} to {ch['end']})"]
+        for g in ch_guides:
+            gj = g["guide_json"]
+            lines += ["", f"### Chapter guide, pages {g['start_page']} to {g['end_page']}", "", gj["summary"], "",
+                      "Key ideas:"]
+            lines += [f"- **{i['title']}** (pages {', '.join(map(str, i['pages']))}): {i['explanation']}"
+                      for i in gj["ideas"]]
+            if gj["details"]:
+                lines += ["", "Easy to miss:"] + [f"- {d['text']} (page {d['page']})" for d in gj["details"]]
+        for n in ch_pages:
+            card = cards.get(n)
+            title = f"### Page {n}" + (f": {card['section']}" if card and card.get("section") else "")
+            lines += ["", title, ""]
+            lines += md_card(card) if card else ["No summary for this page."]
+            page_marks = [m["text"] for m in marks if m["page_no"] == n]
+            if page_marks:
+                lines += ["", "Highlighted:"] + [f"> {t}" for t in page_marks]
+
+    missing = [n for n in range(1, count + 1) if n not in cards and n not in empty]
+    if missing:
+        lines += ["", "## Pages without a summary", "", ", ".join(map(str, missing))]
+    name = re.sub(r"[^A-Za-z0-9]+", "-", book["title"]).strip("-")[:80] or "book"
+    return Response("\n".join(lines) + "\n", media_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{name}-summary.md"'})
 
 
 def level_of_page(user_id: int, book_id: int, page_no: int) -> tuple[list[str], str]:
@@ -504,9 +670,11 @@ MAX_GUIDE_PAGES = 60  # about 60,000 input tokens for a dense book. Same number 
 
 
 @app.get("/api/books/{book_id}/guide")
-def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, user: dict = Depends(current_user)):
+def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, fresh: bool = False,
+                  user: dict = Depends(current_user)):
     """Pages start..end (a chapter or a section) as one guide: the key ideas, the details that are easy
-    to miss, and a line for every page. only_saved: never call the LLM."""
+    to miss, and a line for every page. only_saved: never call the LLM.
+    fresh: the reader pressed Regenerate. The saved guide is replaced, and the level is looked up again."""
     book = get_book(book_id, user)
     if not 1 <= start <= end <= (book["page_count"] or 0):
         raise HTTPException(422, "These pages are not in the book")
@@ -518,9 +686,9 @@ def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, 
                  "AND end_page = %s", (book_id, start, end))
         return {**rows[0]["guide_json"], "level": rows[0]["level"]} if rows else None
 
-    if guide := cached():
+    if not fresh and (guide := cached()):
         return guide
-    if only_saved:
+    if only_saved and not fresh:
         return {"not_made": True}
     pages = q("SELECT page_no, text_md FROM pages WHERE book_id = %s AND page_no BETWEEN %s AND %s ORDER BY page_no",
               (book_id, start, end))
@@ -533,16 +701,18 @@ def chapter_guide(book_id: int, start: int, end: int, only_saved: bool = False, 
     level = profile.page_level([s["level"] for s in skill_rows(user["id"], [t["skill"] for t in tags])])
     figures = figure_pages(book["file_path"], start, end)
     with llm_lock:  # ponytail: a long call (up to minutes). Page cards wait behind it; see llm_lock.
-        if guide := cached():
+        if not fresh and (guide := cached()):
             return guide
         try:
             result, usage = llm.chapter_guide(book["title"], [(p["page_no"], p["text_md"]) for p in pages],
                                               figures, level)
         except llm.LLMError as e:
-            raise HTTPException(502, str(e))
+            raise HTTPException(502, str(e))  # the old guide stays
         q("INSERT INTO chapter_guides (book_id, start_page, end_page, level, guide_json) VALUES (%s, %s, %s, %s, %s) "
-          "ON CONFLICT DO NOTHING", (book_id, start, end, level, Jsonb(llm.checked_guide(result, start, end, figures))))
-        log_usage(user["id"], "chapter_guide", usage)
+          "ON CONFLICT (book_id, start_page, end_page) DO UPDATE SET level = EXCLUDED.level, "
+          "guide_json = EXCLUDED.guide_json, created_at = now()",
+          (book_id, start, end, level, Jsonb(llm.checked_guide(result, start, end, figures))))
+        log_usage(user["id"], "chapter_guide_regenerated" if fresh else "chapter_guide", usage)
     return cached()
 
 
@@ -598,7 +768,7 @@ def delete_highlight(highlight_id: int, user: dict = Depends(current_user)):
 
 
 # The newest saved summary of each page, whatever level it was written for.
-CARDS_SQL = ("SELECT DISTINCT ON (page_no) page_no, card_json->'bullets' AS bullets FROM page_cards "
+CARDS_SQL = ("SELECT DISTINCT ON (page_no) page_no, card_json->'bullets' AS bullets, card_json AS card FROM page_cards "
              "WHERE book_id = %s {more} ORDER BY page_no, created_at DESC")
 
 
